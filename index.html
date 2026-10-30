@@ -22,6 +22,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Rounded","Segoe UI",Roboto,system-ui,sans-serif;
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
 body{position:fixed;inset:0;overflow:hidden}
+/* iOS: stop double-tap / pinch zoom. Applied to the page itself during a game, because WebKit
+   ignores touch-action:none on absolutely positioned elements for double-tap zoom (bug 218015). */
+html{touch-action:manipulation}
+html.ingame,html.ingame body{touch-action:none}
+html.ingame.zoomed,html.ingame.zoomed body{touch-action:manipulation}
+#zoomNote{position:absolute;display:none;z-index:50;background:var(--amber);color:#2a1800;font-weight:800;text-align:center;line-height:1.3;pointer-events:none;box-sizing:border-box}
 button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
 .screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
   padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 12px)}
@@ -69,6 +75,8 @@ details.how b{color:var(--ink)}
 
 /* ---------- game ---------- */
 #game{padding-left:6px;padding-right:6px;gap:6px;touch-action:none}
+#game *{touch-action:none}
+html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
 .hud{width:100%;max-width:560px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:0 4px}
 .pl{display:flex;flex-direction:column;gap:3px;min-width:0}
 .pl.opp{align-items:flex-end;text-align:right;gap:5px}
@@ -147,7 +155,7 @@ details.how b{color:var(--ink)}
     <p><b>Tap</b> to rotate · <b>drag</b> sideways to move · <b>drag down</b> to soft drop · <b>flick down</b> to slam · <b>flick up</b> to hold.</p>
     <p>Clearing 2, 3 or 4 lines at once sends 1, 2 or 4 grey rows to a <b>random rival</b> (more for combos and back-to-back fours) — a pop-up tells you who got them. Clearing lines also cancels rows heading your way: watch the red bar. Last board standing wins the round; first to 2 rounds wins.</p>
   </details>
-  <div class="ver">v2 · 2–3 players</div>
+  <div class="ver">v2.1 · 2–3 players</div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -182,6 +190,8 @@ details.how b{color:var(--ink)}
   </div>
   <div class="hint">tap rotate · drag move · flick ↓ drop · flick ↑ hold</div>
 </section>
+
+<div id="zoomNote">Zoomed in — pinch outwards with two fingers to see the whole game</div>
 
 <noscript><p style="padding:20px">GreenBlock needs JavaScript switched on.</p></noscript>
 
@@ -572,7 +582,9 @@ const onGameScreen = () => $('#game').classList.contains('active');
 
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id));
+  document.documentElement.classList.toggle('ingame', id==='game');
   if (id==='game') requestAnimationFrame(layout);
+  checkZoom();
 }
 function ovShow(html){ const o=$('#overlay'); o.innerHTML=html; o.classList.add('show'); }
 function ovHide(){ $('#overlay').classList.remove('show'); }
@@ -1080,8 +1092,43 @@ function endGesture(e, cancelled){
 }
 zone.addEventListener('pointerup',e=>endGesture(e,false));
 zone.addEventListener('pointercancel',e=>endGesture(e,true));
-document.addEventListener('touchmove',e=>{ if (onGameScreen()) e.preventDefault(); },{passive:false});
-document.addEventListener('gesturestart',e=>e.preventDefault());
+/* ---------------- stop iOS zooming the page mid-game ----------------
+   iOS Safari ignores user-scalable=no, so a quick double tap (e.g. rotating twice fast) or a
+   stray second finger can zoom the page. Block those while the game screen is showing; if the
+   page does end up zoomed, show a notice and allow a two-finger pinch so it can be zoomed back out. */
+const VIEWPORT = document.querySelector('meta[name=viewport]');
+const VP_CONTENT = VIEWPORT ? VIEWPORT.getAttribute('content') : '';
+let zoomed=false, zoomResetTried=false;
+const interactive = t => !!(t && t.closest && t.closest('button,input,a,summary'));
+document.addEventListener('touchstart',e=>{ if (onGameScreen() && !zoomed && e.touches.length>1) e.preventDefault(); },{passive:false});
+document.addEventListener('touchmove',e=>{
+  if (!onGameScreen()) return;
+  if (zoomed && e.touches.length>1) return;          // let a pinch-out through when zoomed
+  e.preventDefault();
+},{passive:false});
+// cancelling touchend stops the double-tap zoom; pointer events (which drive the controls) have already fired
+document.addEventListener('touchend',e=>{ if (onGameScreen() && !interactive(e.target)) e.preventDefault(); },{passive:false});
+document.addEventListener('dblclick',e=>{ if (onGameScreen()) e.preventDefault(); },{passive:false});
+['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>{ if (onGameScreen() && !zoomed) e.preventDefault(); },{passive:false}));
+function resetZoom(){
+  // re-applying the viewport settings can make Safari snap back to 100% (not guaranteed)
+  if (!VIEWPORT) return;
+  VIEWPORT.setAttribute('content','width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+  setTimeout(()=>VIEWPORT.setAttribute('content', VP_CONTENT), 300);
+}
+function checkZoom(){
+  const vv=window.visualViewport; if (!vv) return;
+  const z = onGameScreen() && vv.scale > 1.04;
+  if (z!==zoomed){ zoomed=z; document.documentElement.classList.toggle('zoomed', z); }
+  const note=$('#zoomNote');
+  if (z){
+    if (!zoomResetTried){ zoomResetTried=true; resetZoom(); }
+    const k=1/vv.scale;
+    Object.assign(note.style, {display:'block', left:vv.offsetLeft+'px', top:vv.offsetTop+'px', width:vv.width+'px',
+      fontSize:(14*k)+'px', padding:`${8*k}px ${12*k}px`});
+  } else { note.style.display='none'; zoomResetTried=false; }
+}
+if (window.visualViewport){ visualViewport.addEventListener('resize', checkZoom); visualViewport.addEventListener('scroll', checkZoom); }
 
 /* keyboard (for testing on a computer) */
 document.addEventListener('keydown',e=>{
@@ -1131,7 +1178,7 @@ drawLogo();
 requestAnimationFrame(frame);
 
 // test hook (harmless in normal play)
-window.__bd = {S, get game(){ return game; }};
+window.__bd = {S, get game(){ return game; }, checkZoom};
 </script>
 </body>
 </html>
