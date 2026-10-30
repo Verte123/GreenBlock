@@ -42,6 +42,7 @@ input:focus{border-color:var(--sky)}
 .btn.primary{background:var(--coral);border-color:transparent;color:#24070e}
 .btn.blue{background:var(--sky);border-color:transparent;color:#06182a}
 .btn:active{transform:translateY(1px);filter:brightness(.93)}
+.btn:disabled{opacity:.45;transform:none;filter:none}
 .row{display:flex;gap:10px}
 .row>*{flex:1;min-width:0}
 .code-in{text-transform:uppercase;letter-spacing:.32em;text-align:center;font-weight:800}
@@ -52,25 +53,35 @@ details.how summary{text-align:center;cursor:pointer;color:var(--ink);font-weigh
 details.how summary::-webkit-details-marker{display:none}
 details.how p{margin:8px 0}
 details.how b{color:var(--ink)}
+.ver{font-size:11px;color:var(--muted);opacity:.75}
 
 /* ---------- lobby ---------- */
-#lobby{justify-content:center;gap:14px;text-align:center}
+#lobby{justify-content:center;gap:14px;text-align:center;overflow-y:auto}
 #lobbyBody{width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px;align-items:center}
 .bigcode{font-size:64px;font-weight:900;letter-spacing:.18em;color:var(--amber);margin:0 0 0 .18em;line-height:1.1}
 .spinner{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--sky);animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ok{font-size:22px;font-weight:800;color:var(--mint)}
+.plist{width:100%;display:flex;flex-direction:column;gap:6px}
+.plist div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left}
+.plist span{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
+.plist .empty{color:var(--muted);font-weight:500;border-style:dashed;justify-content:center}
 
 /* ---------- game ---------- */
 #game{padding-left:6px;padding-right:6px;gap:6px;touch-action:none}
 .hud{width:100%;max-width:560px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:0 4px}
 .pl{display:flex;flex-direction:column;gap:3px;min-width:0}
-.pl.opp{align-items:flex-end;text-align:right}
-.nm{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.wins{display:flex;gap:4px;height:10px}
+.pl.opp{align-items:flex-end;text-align:right;gap:5px}
+.nm{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;min-width:0}
+.wins{display:flex;gap:4px;height:10px;flex:none}
 .dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--line)}
 .dot.on{background:var(--amber);border-color:var(--amber)}
 .sc{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rv{display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:0;max-width:100%}
+.hud.three .rv{flex-direction:row;align-items:center;gap:6px}
+.hud.three .rv .nm{font-size:13px}
+.hud.three .rv .sc{display:none}
+.rv.out .nm{color:var(--muted)}
 .mid{text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
 .rl{font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-weight:700}
 .tm{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
@@ -81,9 +92,14 @@ details.how b{color:var(--ink)}
 .lbl{font-size:9px;font-weight:800;letter-spacing:.16em;color:var(--muted)}
 .stat{text-align:center;padding:2px 0}
 .stat .v{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
-#oppInfo{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:center}
-#oppIncoming{color:var(--bad);font-weight:800}
-.practice .opp-only{display:none!important}
+#rivals{display:flex;flex-direction:column;gap:6px}
+.rival .lbl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.06em;padding:0 2px}
+.rival canvas{border-radius:3px}
+.rival.out canvas{opacity:.35}
+.rinfo{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap}
+.rinfo .inc{color:var(--bad);font-weight:800}
+.rival.out .rinfo{color:var(--bad);font-weight:800;letter-spacing:.1em}
+.practice .vs-only{display:none!important}
 .boardwrap{position:relative;display:flex;gap:4px}
 #meter{width:7px;border-radius:4px;background:var(--panel);position:relative;overflow:hidden;border:1px solid var(--line)}
 #meterFill{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--bad);transition:height .15s}
@@ -92,9 +108,16 @@ details.how b{color:var(--ink)}
   background:rgba(14,15,22,.8);border-radius:10px;text-align:center;padding:16px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 #overlay.show{display:flex}
 #overlay .btn{max-width:220px}
-.ov-big{font-size:42px;font-weight:900;line-height:1.05}
+.ov-big{font-size:42px;font-weight:900;line-height:1.05;overflow-wrap:anywhere}
+.ov-big.mid-size{font-size:32px}
 .ov-big.win{color:var(--mint)} .ov-big.lose{color:var(--coral)}
-.ov-sub{font-size:15px;color:var(--muted);line-height:1.4}
+.ov-sub{font-size:15px;color:var(--muted);line-height:1.45}
+#toast{position:absolute;left:11px;right:0;top:24%;display:flex;justify-content:center;pointer-events:none;z-index:3}
+#toastPill{background:rgba(18,19,28,.8);border:1px solid var(--amber);color:var(--amber);font-weight:800;font-size:15px;padding:7px 14px;border-radius:999px;
+  white-space:nowrap;max-width:94%;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(-6px);transition:opacity .15s,transform .15s}
+#toastPill.show{opacity:1;transform:none}
+#toastPill b{color:var(--ink)}
+#toastPill.info{border-color:var(--line);color:var(--muted)}
 .hint{font-size:11px;color:var(--muted);text-align:center}
 </style>
 </head>
@@ -105,7 +128,7 @@ details.how b{color:var(--ink)}
   <div class="logo">
     <canvas id="logoCv" width="300" height="120"></canvas>
     <div class="title"><span>GREEN</span>BLOCK</div>
-    <div class="tag">Clear lines. Bury your rival.</div>
+    <div class="tag">Clear lines. Bury your rivals.</div>
   </div>
   <div class="card">
     <div class="lab">Your name</div>
@@ -120,10 +143,11 @@ details.how b{color:var(--ink)}
   </div>
   <details class="how">
     <summary>How to play ▾</summary>
-    <p>Both phones on the <b>same Wi-Fi</b>. One player taps <b>Host</b> and reads out the 4-letter code; the other types it in and taps <b>Join</b>.</p>
+    <p>Two or three phones on the <b>same Wi-Fi</b>. One player taps <b>Host</b> and reads out the 4-letter code; the others type it in and tap <b>Join</b>. The host taps <b>Start</b> when everyone is in.</p>
     <p><b>Tap</b> to rotate · <b>drag</b> sideways to move · <b>drag down</b> to soft drop · <b>flick down</b> to slam · <b>flick up</b> to hold.</p>
-    <p>Clearing 2, 3 or 4 lines at once sends 1, 2 or 4 grey rows to your rival (more for combos and back-to-back fours). Clearing lines also cancels rows heading your way — watch the red bar. Last board standing wins the round; first to 2 rounds wins.</p>
+    <p>Clearing 2, 3 or 4 lines at once sends 1, 2 or 4 grey rows to a <b>random rival</b> (more for combos and back-to-back fours) — a pop-up tells you who got them. Clearing lines also cancels rows heading your way: watch the red bar. Last board standing wins the round; first to 2 rounds wins.</p>
   </details>
+  <div class="ver">v2 · 2–3 players</div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -133,26 +157,27 @@ details.how b{color:var(--ink)}
 
 <!-- ============ GAME ============ -->
 <section id="game" class="screen">
-  <div class="hud">
-    <div class="pl me"><div class="nm" id="meName">You</div><div class="wins opp-only" id="meWins"></div><div class="sc" id="meScore">0</div></div>
+  <div class="hud" id="hud">
+    <div class="pl me"><div class="nm" id="meName">You</div><div class="wins vs-only" id="meWins"></div><div class="sc" id="meScore">0</div></div>
     <div class="mid"><div class="rl" id="roundLbl">Round 1</div><div class="tm" id="timer">0:00</div><button class="quit" id="quitBtn">Leave</button></div>
-    <div class="pl opp opp-only"><div class="nm" id="oppName">Rival</div><div class="wins" id="oppWins"></div><div class="sc" id="oppScore">0</div></div>
+    <div class="pl opp vs-only" id="oppHud"></div>
   </div>
   <div id="playfield">
     <div class="side" id="sideL">
-      <div class="box"><div class="lbl">HOLD</div><canvas id="holdCv"></canvas></div>
-      <div class="box opp-only"><div class="lbl">RIVAL</div><canvas id="oppCv"></canvas><div id="oppInfo"></div></div>
+      <div class="box" id="holdBox"><div class="lbl">HOLD</div><canvas id="holdCv"></canvas></div>
+      <div id="rivals" class="vs-only"></div>
     </div>
     <div class="boardwrap">
       <div id="meter"><div id="meterFill"></div></div>
       <canvas id="board"></canvas>
       <div id="overlay"></div>
+      <div id="toast"><div id="toastPill"></div></div>
     </div>
     <div class="side" id="sideR">
       <div class="box"><div class="lbl">NEXT</div><canvas id="nextCv"></canvas></div>
       <div class="stat"><div class="lbl">LEVEL</div><div class="v" id="levelV">1</div></div>
       <div class="stat"><div class="lbl">LINES</div><div class="v" id="linesV">0</div></div>
-      <div class="stat opp-only"><div class="lbl">SENT</div><div class="v" id="sentV">0</div></div>
+      <div class="stat vs-only"><div class="lbl">SENT</div><div class="v" id="sentV">0</div></div>
     </div>
   </div>
   <div class="hint">tap rotate · drag move · flick ↓ drop · flick ↑ hold</div>
@@ -163,16 +188,19 @@ details.how b{color:var(--ink)}
 <script>
 'use strict';
 /* =====================================================================
-   GreenBlock — two-player falling-block duel over WebRTC (PeerJS).
-   Single file, no build step. Open with ?local to link two tabs of the
-   same browser without the internet (for testing).
+   GreenBlock — 2–3 player falling-block battle over WebRTC (PeerJS).
+   The host phone is the hub: guests connect to it, and it relays boards
+   and attacks between them and decides who is out and who wins.
+   Single file, no build step. Open with ?local to link several tabs of
+   the same browser without the internet (for testing).
    ===================================================================== */
 
-const PEERJS_URL = 'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';
-const ID_PREFIX  = 'greenblock-v1-';
-const LOCAL      = new URLSearchParams(location.search).has('local');
+const PEERJS_URL  = 'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';
+const PROTO       = 2;
+const ID_PREFIX   = 'greenblock-v2-';
+const LOCAL       = new URLSearchParams(location.search).has('local');
 const COLS = 10, ROWS = 22, HIDDEN = 2, VIS = ROWS - HIDDEN;
-const WINS_NEEDED = 2;
+const WINS_NEEDED = 2, MAX_PLAYERS = 3;
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -218,7 +246,7 @@ const LOCK_MS  = 500, MAX_RESETS = 15, LEVEL_EVERY_MS = 30000;
 class Game {
   constructor(seed, {timeLevels=true} = {}){
     this.board = Array.from({length:ROWS}, () => new Array(COLS).fill(0));
-    this.rng = mulberry32(seed>>>0);       // shared seed => both players get the same pieces
+    this.rng = mulberry32(seed>>>0);       // shared seed => every player gets the same pieces
     this.bag = []; this.queue = [];
     while (this.queue.length < 5) this.queue.push(this.nextFromBag());
     this.hold = null; this.canHold = true;
@@ -417,14 +445,21 @@ function layout(){
   if (!W || !H) return;
   const side=Math.round(Math.min(108, Math.max(56, W*0.17)));
   const cell=Math.max(10, Math.floor(Math.min((W - 2*side - 12 - 13)/COLS, (H-2)/VIS)));
-  L.cell=cell; L.side=side; L.mini=Math.max(3, Math.floor((side-10)/COLS));
+  L.cell=cell; L.side=side;
   $('#sideL').style.width=side+'px'; $('#sideR').style.width=side+'px';
   sizeCanvas($('#board'), cell*COLS, cell*VIS);
   $('#meter').style.height=(cell*VIS+2)+'px';
   const inner=side-10;
   sizeCanvas($('#holdCv'), inner, Math.round(inner*0.55));
   sizeCanvas($('#nextCv'), inner, Math.round(inner*0.5)*3);
-  sizeCanvas($('#oppCv'), L.mini*COLS, L.mini*VIS);
+  // rival mini-boards share the left column under HOLD; shrink them to fit beside the main board
+  const boxes=[...document.querySelectorAll('#rivals .rival')], n=boxes.length;
+  if (n){
+    const holdH=$('#holdBox').offsetHeight;
+    const avail=cell*VIS + 2 - holdH - 6 - n*48 - (n-1)*6;
+    L.mini=Math.max(3, Math.min(Math.floor(inner/COLS), Math.floor(avail/(n*VIS))));
+    boxes.forEach(b=>sizeCanvas(b.querySelector('canvas'), L.mini*COLS, L.mini*VIS));
+  }
   tileCache.clear();
   R.force=true;
 }
@@ -443,7 +478,7 @@ function render(){
   if (!$('#game').classList.contains('active') || !game) return;
   const flashing = game.flashes.length>0;
   if (game.version!==R.ver || R.force || flashing){ drawBoard(); drawSide(); updateStats(); R.ver=game.version; }
-  if (S.oppDirty || R.force){ drawOpp(); S.oppDirty=false; }
+  if (S.oppDirty || R.force){ drawRivals(); S.oppDirty=false; }
   R.force=false;
   const sec=Math.floor(game.elapsed/1000);
   if (sec!==R.sec){ R.sec=sec; $('#timer').textContent=`${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`; }
@@ -478,19 +513,25 @@ function drawSide(){
   const slot=n.height/3;
   for (let i=0;i<3;i++) drawPreview(nx,game.queue[i],n.width/2,slot*i+slot/2,i===0?pcs:Math.floor(pcs*0.8),false);
 }
-function drawOpp(){
-  const cv=$('#oppCv'), x=cv.getContext('2d'), cs=L.mini*DPR;
-  x.clearRect(0,0,cv.width,cv.height);
-  x.fillStyle='#141622'; x.fillRect(0,0,cv.width,cv.height);
-  const o=S.oppState;
-  if (!o || typeof o.s!=='string'){ $('#oppInfo').innerHTML='&nbsp;'; return; }
-  for (let i=0;i<Math.min(o.s.length,COLS*VIS);i++){
-    const v=o.s.charCodeAt(i)-48; if (v<1||v>8) continue;
-    x.fillStyle=COLORS[v]; x.fillRect((i%COLS)*cs+DPR*0.5, Math.floor(i/COLS)*cs+DPR*0.5, cs-DPR, cs-DPR);
-  }
-  if (o.d){ x.fillStyle='rgba(10,11,18,.6)'; x.fillRect(0,0,cv.width,cv.height); }
-  $('#oppInfo').innerHTML = `${o.l|0} lines` + (o.p>0 ? ` · <span id="oppIncoming">+${o.p|0}</span>` : '');
-  $('#oppScore').textContent = (o.sc|0).toLocaleString();
+function drawRivals(){
+  document.querySelectorAll('#rivals .rival').forEach(box=>{
+    const id=+box.dataset.id, cv=box.querySelector('canvas'), x=cv.getContext('2d'), cs=L.mini*DPR;
+    const o=S.opp[id], out=!S.alive.has(id);
+    x.clearRect(0,0,cv.width,cv.height);
+    x.fillStyle='#141622'; x.fillRect(0,0,cv.width,cv.height);
+    if (o && typeof o.s==='string'){
+      for (let i=0;i<Math.min(o.s.length,COLS*VIS);i++){
+        const v=o.s.charCodeAt(i)-48; if (v<1||v>8) continue;
+        x.fillStyle=COLORS[v]; x.fillRect((i%COLS)*cs+DPR*0.5, Math.floor(i/COLS)*cs+DPR*0.5, cs-DPR, cs-DPR);
+      }
+    }
+    box.classList.toggle('out', out);
+    const info=box.querySelector('.rinfo');
+    if (out) info.textContent='OUT';
+    else info.innerHTML = o ? `${o.l|0} lines` + (o.p>0 ? ` · <span class="inc">+${o.p|0}</span>` : '') : '&nbsp;';
+    const sc=document.querySelector(`#oppHud [data-sc="${id}"]`);
+    if (sc && o) sc.textContent=(o.sc|0).toLocaleString();
+  });
 }
 function updateStats(){
   $('#levelV').textContent=game.level;
@@ -506,17 +547,28 @@ function drawLogo(){
 }
 
 /* ---------------- app state ---------------- */
+// Player ids: host is 0, guests are 1 and 2.
 const S = {
-  mode:null, role:null, net:null, connected:false, lost:false, helloSent:false,
-  myName:'Player', oppName:'Rival', code:'',
-  round:0, wins:{host:0,guest:0}, roundOver:false, playing:false,
-  oppState:null, oppDirty:false, lastHeard:0, lastSent:0, sentVer:-1,
+  mode:null, role:null, myId:0, myName:'Player', code:'',
+  players:[],                 // [{id,name}] — the room roster, host first
+  links:new Map(), pending:new Set(), hostLink:null, localCh:null,
+  connected:false, lost:false, inMatch:false,
+  round:0, wins:{}, alive:new Set(), roundOver:false, playing:false,
+  opp:{}, oppDirty:false, lastHeard:0, lastSent:0, sentVer:-1,
   timers:[], joinTimer:null,
 };
-let game=null, peer=null, conn=null;
+let game=null, peer=null;
+
+const nameOf  = id => (S.players.find(p=>p.id===id) || {}).name || 'Rival';
+const rivals  = () => S.players.filter(p=>p.id!==S.myId);
+const hostName= () => nameOf(0);
+function cleanName(n){ return String(n||'').replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,12) || 'Player'; }
+function normWins(w){ const o={}; for (const k in (w||{})) o[k|0]=w[k]|0; return o; }
+function normPlayers(ps){ return (Array.isArray(ps)?ps:[]).slice(0,MAX_PLAYERS).map(p=>({id:p.id|0, name:cleanName(p.name)})); }
 
 function later(fn,ms){ const id=setTimeout(fn,ms); S.timers.push(id); return id; }
 function clearTimers(){ S.timers.forEach(clearTimeout); S.timers=[]; }
+const onGameScreen = () => $('#game').classList.contains('active');
 
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id));
@@ -525,48 +577,63 @@ function showScreen(id){
 function ovShow(html){ const o=$('#overlay'); o.innerHTML=html; o.classList.add('show'); }
 function ovHide(){ $('#overlay').classList.remove('show'); }
 
+let toastT=null;
+function showToast(html, info){
+  const p=$('#toastPill'); p.innerHTML=html; p.classList.toggle('info', !!info);
+  p.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>p.classList.remove('show'), 1500);
+}
+function hideToast(){ clearTimeout(toastT); $('#toastPill').classList.remove('show'); }
+
+const dots = n => Array.from({length:WINS_NEEDED},(_,i)=>`<div class="dot${i<n?' on':''}"></div>`).join('');
 function updateHud(){
   const practice = S.mode==='practice';
   $('#game').classList.toggle('practice', practice);
-  $('#meName').textContent = S.myName;
-  $('#oppName').textContent = S.oppName;
+  $('#meName').textContent = practice ? S.myName : nameOf(S.myId);
   $('#roundLbl').textContent = practice ? 'Practice' : `Round ${S.round}`;
-  if (!practice){
-    const me=S.role, op=me==='host'?'guest':'host';
-    const dots=n=>Array.from({length:WINS_NEEDED},(_,i)=>`<div class="dot${i<n?' on':''}"></div>`).join('');
-    $('#meWins').innerHTML=dots(S.wins[me]); $('#oppWins').innerHTML=dots(S.wins[op]);
-  }
+  if (practice) return;
+  $('#meWins').innerHTML = dots(S.wins[S.myId]|0);
+  const rv = rivals();
+  $('#hud').classList.toggle('three', rv.length>1);
+  $('#oppHud').innerHTML = rv.map(p=>`<div class="rv${S.alive.has(p.id)?'':' out'}"><div class="nm">${esc(p.name)}</div><div class="wins">${dots(S.wins[p.id]|0)}</div><div class="sc" data-sc="${p.id}">${((S.opp[p.id]||{}).sc|0).toLocaleString()}</div></div>`).join('');
 }
+function buildRivals(){
+  const rv = S.mode==='versus' ? rivals() : [];
+  $('#rivals').innerHTML = rv.map(p=>`<div class="box rival" data-id="${p.id}"><div class="lbl">${esc(p.name.toUpperCase())}</div><canvas></canvas><div class="rinfo">&nbsp;</div></div>`).join('');
+  if (onGameScreen()) layout();
+  S.oppDirty=true;
+}
+const standings = () => S.players.map(p=>`${esc(p.name)} ${S.wins[p.id]|0}`).join(' · ');
 
 /* ---------------- lobby ---------------- */
 function lobby(html){ $('#lobbyBody').innerHTML=html; showScreen('lobby'); }
-function lobbyWaitingHost(code){
-  lobby(`<div class="lab">Your game code</div><div class="bigcode">${esc(code)}</div>
-    <div class="small">On the other phone, type this code and tap <b>Join</b>.</div>
-    <div class="spinner"></div><div class="small">Waiting for your rival…</div>
+function playerRows(){
+  return S.players.map(p=>`<div>${esc(p.name)}<span>${p.id===0?'host':(p.id===S.myId?'you':'joined ✓')}</span></div>`).join('');
+}
+function hostLobby(){
+  if (S.role!=='host' || S.inMatch || S.lost) return;
+  const n=S.players.length;
+  lobby(`<div class="lab">Your game code</div><div class="bigcode">${esc(S.code)}</div>
+    <div class="small">On the other phones, type this code and tap <b>Join</b>. Up to ${MAX_PLAYERS} players.</div>
+    <div class="plist">${playerRows()}${n<MAX_PLAYERS?'<div class="empty">Waiting for players…</div>':''}</div>
+    <button class="btn primary" data-act="start"${n<2?' disabled':''}>${n<2?'Start match':`Start match · ${n} players`}</button>
     <button class="btn" data-act="cancel">Cancel</button>`);
 }
+function guestLobby(){
+  if (S.role!=='guest' || S.lost) return;
+  lobby(`<div class="ok">✓ Joined ${esc(hostName())}'s game</div>
+    <div class="plist">${playerRows()}</div>
+    <div class="spinner"></div><div class="small">Waiting for ${esc(hostName())} to start the match…</div>
+    <button class="btn" data-act="cancel">Leave</button>`);
+}
 function lobbyError(msg){
-  if (S.connected && !S.lost) return;
+  S.lost=true; clearTimers();
   lobby(`<div class="err">${esc(msg)}</div><button class="btn" data-act="cancel">Back</button>`);
   teardown();
 }
-function onConnected(){
-  if (S.role==='host'){
-    lobby(`<div class="ok">✓ ${esc(S.oppName)} has joined</div>
-      <div class="small">Best of 3 rounds. Last board standing wins each round.</div>
-      <button class="btn primary" data-act="start">Start match</button>
-      <button class="btn" data-act="cancel">Leave</button>`);
-  } else {
-    lobby(`<div class="ok">✓ Connected to ${esc(S.oppName)}</div>
-      <div class="spinner"></div><div class="small">Waiting for ${esc(S.oppName)} to start the match…</div>
-      <button class="btn" data-act="cancel">Leave</button>`);
-  }
-}
 $('#lobbyBody').addEventListener('click',e=>{
-  const a=e.target.closest('[data-act]'); if (!a) return;
+  const a=e.target.closest('[data-act]'); if (!a || a.disabled) return;
   if (a.dataset.act==='cancel') leave();
-  if (a.dataset.act==='start' && S.role==='host' && S.connected) startMatch();
+  if (a.dataset.act==='start' && S.role==='host' && S.players.length>=2) startMatch();
 });
 
 /* ---------------- networking ---------------- */
@@ -587,150 +654,289 @@ function friendlyErr(err){
   if (t==='network'||t==='server-error'||t==='socket-error'||t==='socket-closed') return 'Could not reach the matchmaking server. Check the internet connection and try again.';
   return 'Connection problem' + (t?` (${t})`:'') + '. Please try again.';
 }
-function resetNet(){ S.net=null; S.connected=false; S.lost=false; S.helloSent=false; S.oppName='Rival'; S.lastHeard=performance.now(); }
+function resetNet(){
+  S.players=[]; S.links=new Map(); S.pending=new Set(); S.hostLink=null; S.localCh=null;
+  S.connected=false; S.lost=false; S.inMatch=false;
+  S.wins={}; S.alive=new Set(); S.opp={}; S.round=0; S.lastHeard=performance.now();
+}
+function parseData(d){ if (typeof d==='string'){ try{ return JSON.parse(d); }catch(_){ return null; } } return d; }
 
+/* ----- host side ----- */
 async function hostGame(){
-  resetNet(); S.role='host'; S.mode='versus';
+  resetNet(); S.role='host'; S.mode='versus'; S.myId=0;
+  S.players=[{id:0, name:S.myName}];
   lobby(`<div class="spinner"></div><div class="small">Creating game…</div><button class="btn" data-act="cancel">Cancel</button>`);
   const code=genCode(); S.code=code;
   if (LOCAL){
-    const ch=new BroadcastChannel('bd-'+code); ch.onmessage=e=>onMsg(e.data);
-    S.net={send:o=>ch.postMessage(o), close:()=>ch.close()};
-    lobbyWaitingHost(code); return;
+    const ch=new BroadcastChannel('gb-'+code); S.localCh=ch;
+    const byCid=new Map();
+    ch.onmessage=e=>{
+      const d=e.data; if (!d || d.to!=='host' || S.localCh!==ch) return;
+      let link=byCid.get(d.from);
+      if (!link){
+        const cid=d.from;
+        link={id:null, name:'', lastHeard:performance.now(), send:o=>{ try{ ch.postMessage({from:'host',to:cid,m:o}); }catch(_){} }, close:()=>byCid.delete(cid)};
+        byCid.set(cid, link); S.pending.add(link);
+      }
+      onHostMsg(link, d.m);
+    };
+    hostLobby(); return;
   }
   try { await loadPeer(); } catch(e){ lobbyError(e.message); return; }
-  if (S.role!=='host') return;
-  peer=new Peer(ID_PREFIX+code.toLowerCase(), {debug:1});
-  peer.on('open',()=>{ if (!S.connected) lobbyWaitingHost(code); });
-  peer.on('connection',c=>{
-    if (conn){ c.on('open',()=>{ try{ c.send({t:'full'}); }catch(_){}; setTimeout(()=>c.close(),400); }); return; }
-    wireConn(c);
+  if (S.role!=='host' || S.code!==code) return;
+  const p=new Peer(ID_PREFIX+code.toLowerCase(), {debug:1}); peer=p;
+  p.on('open',()=>{ if (!S.inMatch && S.players.length===1) hostLobby(); });
+  p.on('connection',c=>{
+    const link={id:null, name:'', conn:c, lastHeard:performance.now(),
+      send:o=>{ try{ if (c.open) c.send(o); }catch(_){} }, close:()=>{ try{ c.close(); }catch(_){} }};
+    S.pending.add(link);
+    c.on('data',d=>onHostMsg(link, parseData(d)));
+    c.on('close',()=>linkClosed(link));
+    c.on('error',()=>linkClosed(link));
   });
-  peer.on('error',err=>{
-    if (err.type==='unavailable-id'){ try{peer.destroy();}catch(_){}; peer=null; hostGame(); return; }
-    if (S.connected) return;               // broker hiccups don't matter once linked
+  p.on('error',err=>{
+    if (peer!==p) return;
+    if (err.type==='unavailable-id'){ try{ p.destroy(); }catch(_){}; peer=null; hostGame(); return; }
+    if (err.type==='peer-unavailable') return;
+    if (S.players.length>1 || S.inMatch) return;   // broker hiccups don't matter once players are linked
     lobbyError(friendlyErr(err));
   });
-  peer.on('disconnected',()=>{ if (!S.connected && peer && !peer.destroyed){ try{ peer.reconnect(); }catch(_){} } });
+  p.on('disconnected',()=>{ if (peer===p && !p.destroyed){ try{ p.reconnect(); }catch(_){} } });
 }
+function sendTo(id,o){ const l=S.links.get(id); if (l) l.send(o); }
+function broadcast(o, except){ S.links.forEach((l,id)=>{ if (id!==except) l.send(o); }); }
+function broadcastRoster(){ broadcast({t:'roster', players:S.players}); }
+
+function onHostMsg(link, m){
+  if (!m || typeof m!=='object' || S.role!=='host' || S.lost) return;
+  link.lastHeard=performance.now();
+  if (link.id==null){
+    if (m.t!=='hello') return;
+    const reject=t=>{ link.send({t}); S.pending.delete(link); setTimeout(()=>link.close(),400); };
+    if ((m.v|0)!==PROTO) return reject('old');
+    if (S.inMatch) return reject('busy');
+    if (S.players.length>=MAX_PLAYERS) return reject('full');
+    let id=1; while (S.players.some(p=>p.id===id)) id++;
+    const base=cleanName(m.name); let name=base, k=2;
+    while (S.players.some(p=>p.name.toLowerCase()===name.toLowerCase())) name=base.slice(0,10)+' '+(k++);
+    link.id=id; link.name=name; S.pending.delete(link); S.links.set(id, link);
+    S.players.push({id, name});
+    link.send({t:'welcome', you:id, v:PROTO});
+    broadcastRoster();
+    hostLobby();
+    return;
+  }
+  const id=link.id;
+  if (S.links.get(id)!==link) return;
+  switch (m.t){
+    case 'b':
+      if (m.r!==S.round) return;
+      S.opp[id]=m; S.oppDirty=true;
+      broadcast({...m, from:id}, id);              // relay to the other guest
+      break;
+    case 'atk':
+      if (m.r!==S.round || S.roundOver || !S.alive.has(id)) return;
+      routeAttack(m.to|0, Math.min(20, m.n|0));
+      break;
+    case 'dead':
+      if (m.r===S.round) eliminate(id);
+      break;
+    case 'rematch':
+      if (matchOver()) startMatch();
+      break;
+    case 'bye':
+      removePlayer(id, `${link.name} left the game.`);
+      break;
+  }
+}
+function linkClosed(link){
+  S.pending.delete(link);
+  if (link.id!=null && S.links.get(link.id)===link) removePlayer(link.id, `${link.name} left the game.`);
+}
+function routeAttack(to, n){
+  if (n<=0 || !S.alive.has(to)) return;          // target already out: rows are lost
+  if (to===S.myId){ if (game && S.playing && !S.roundOver) game.addGarbage(n); }
+  else sendTo(to, {t:'atk', n, r:S.round});
+}
+function removePlayer(id, msg){
+  const link=S.links.get(id); if (!link) return;
+  const name=link.name;
+  if (S.inMatch && !S.roundOver && S.alive.has(id)) eliminate(id);
+  S.links.delete(id); link.close();
+  S.players=S.players.filter(p=>p.id!==id);
+  delete S.wins[id]; delete S.opp[id]; S.alive.delete(id);
+  broadcast({t:'left', id, name});
+  broadcastRoster();
+  if (!S.inMatch){ hostLobby(); return; }
+  if (S.players.length<2){ aloneEnd(`${msg} There's no one left to play.`); return; }
+  if (onGameScreen()){ showToast(`${esc(name)} left the game`, true); buildRivals(); updateHud(); }
+}
+function eliminate(id){
+  if (S.roundOver || !S.alive.has(id)) return;
+  S.alive.delete(id);
+  broadcast({t:'out', id, r:S.round});
+  markOut(id);
+  if (S.alive.size<=1) endRound(S.alive.size ? [...S.alive][0] : id);
+}
+function endRound(winner){
+  if (S.roundOver) return;
+  S.wins[winner]=(S.wins[winner]|0)+1;
+  const wins={...S.wins};
+  broadcast({t:'end', r:S.round, winner, wins});
+  applyRoundEnd(winner, wins);
+  if (!matchOver()) later(hostNextRound, 3800);
+}
+function startMatch(){
+  if (S.role!=='host' || S.players.length<2 || S.lost) return;
+  clearTimers(); S.inMatch=true;
+  S.wins={}; S.players.forEach(p=>S.wins[p.id]=0);
+  S.round=0; hostNextRound();
+}
+function hostNextRound(){
+  if (S.role!=='host' || S.lost || S.players.length<2) return;
+  S.round++;
+  const seed=(Math.random()*4294967296)>>>0;
+  broadcast({t:'start', seed, round:S.round, players:S.players, wins:S.wins});
+  beginRound(seed, S.round);
+}
+function aloneEnd(text){
+  S.lost=true; S.playing=false; clearTimers();
+  if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">No rivals left</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
+  else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
+  teardown();
+}
+
+/* ----- guest side ----- */
 async function joinGame(code){
-  resetNet(); S.role='guest'; S.mode='versus'; S.code=code;
+  resetNet(); S.role='guest'; S.mode='versus'; S.code=code; S.myId=-1;
   lobby(`<div class="spinner"></div><div class="small">Joining ${esc(code)}…</div><button class="btn" data-act="cancel">Cancel</button>`);
-  S.joinTimer=setTimeout(()=>{ if (!S.connected && S.role==='guest') lobbyError("Couldn't connect. Check the code, and that both phones are on the same Wi-Fi, then try again."); }, 20000);
+  S.joinTimer=setTimeout(()=>{ if (!S.connected && S.role==='guest' && !S.lost) lobbyError("Couldn't connect. Check the code, and that the phones are on the same Wi-Fi, then try again."); }, 20000);
   if (LOCAL){
-    const ch=new BroadcastChannel('bd-'+code); ch.onmessage=e=>onMsg(e.data);
-    S.net={send:o=>ch.postMessage(o), close:()=>ch.close()};
+    const ch=new BroadcastChannel('gb-'+code); S.localCh=ch;
+    const cid='c'+Math.random().toString(36).slice(2,10);
+    ch.onmessage=e=>{ const d=e.data; if (d && d.to===cid && S.localCh===ch) onGuestMsg(d.m); };
+    S.hostLink={send:o=>{ try{ ch.postMessage({from:cid,to:'host',m:o}); }catch(_){} }, close:()=>{}};
     sendHello(); return;
   }
   try { await loadPeer(); } catch(e){ lobbyError(e.message); return; }
-  if (S.role!=='guest') return;
-  peer=new Peer({debug:1});
-  peer.on('open',()=>{ wireConn(peer.connect(ID_PREFIX+code.toLowerCase(), {reliable:true, serialization:'json'})); });
-  peer.on('error',err=>{
-    if (S.connected) return;
+  if (S.role!=='guest' || S.code!==code) return;
+  const p=new Peer({debug:1}); peer=p;
+  p.on('open',()=>{
+    const c=p.connect(ID_PREFIX+code.toLowerCase(), {reliable:true, serialization:'json'});
+    c.on('open',()=>{ S.hostLink={send:o=>{ try{ if (c.open) c.send(o); }catch(_){} }, close:()=>{ try{ c.close(); }catch(_){} }}; S.lastHeard=performance.now(); sendHello(); });
+    c.on('data',d=>onGuestMsg(parseData(d)));
+    c.on('close',()=>connectionLost());
+    c.on('error',()=>connectionLost());
+  });
+  p.on('error',err=>{
+    if (peer!==p || S.connected || S.lost) return;
     if (err.type==='peer-unavailable'){ lobbyError(`No game found with code ${code}. Check the code, and that the host's screen is still showing it.`); return; }
     lobbyError(friendlyErr(err));
   });
 }
-function wireConn(c){
-  conn=c;
-  c.on('open',()=>{ S.net={send:o=>{ try{ if (c.open) c.send(o); }catch(_){} }, close:()=>{ try{c.close();}catch(_){} }}; S.lastHeard=performance.now(); sendHello(); });
-  c.on('data',d=>{ if (typeof d==='string'){ try{ d=JSON.parse(d); }catch(_){ return; } } onMsg(d); });
-  c.on('close',()=>connectionLost());
-  c.on('error',()=>connectionLost());
-}
-function send(o){ if (S.net) S.net.send(o); }
-function sendHello(){ S.helloSent=true; send({t:'hello', name:S.myName, v:1}); }
+function toHost(o){ if (S.hostLink) S.hostLink.send(o); }
+function sendHello(){ toHost({t:'hello', name:S.myName, v:PROTO}); }
 
-function onMsg(m){
-  if (!m || typeof m!=='object') return;
+function onGuestMsg(m){
+  if (!m || typeof m!=='object' || S.role!=='guest' || S.lost) return;
   S.lastHeard=performance.now();
   switch (m.t){
-    case 'hello':
-      S.oppName=String(m.name||'Rival').slice(0,14) || 'Rival';
-      if (!S.connected){
-        S.connected=true; clearTimeout(S.joinTimer);
-        if (!S.helloSent) sendHello();
-        onConnected();
-      }
+    case 'welcome':
+      S.myId=m.you|0; S.connected=true; clearTimeout(S.joinTimer);
       break;
-    case 'full': lobbyError('That game already has two players.'); break;
+    case 'roster': {
+      const before=S.players;
+      S.players=normPlayers(m.players);
+      const ids=new Set(S.players.map(p=>p.id));
+      before.forEach(p=>{ if (!ids.has(p.id)){ S.alive.delete(p.id); delete S.opp[p.id]; delete S.wins[p.id]; } });
+      if (onGameScreen()){ buildRivals(); updateHud(); } else guestLobby();
+      break; }
+    case 'left':
+      if (onGameScreen() && (m.id|0)!==S.myId) showToast(`${esc(cleanName(m.name))} left the game`, true);
+      break;
+    case 'old':  lobbyError('This phone has a different version of GreenBlock from the host. Refresh the page on every phone and try again.'); break;
+    case 'full': lobbyError('That game already has three players.'); break;
+    case 'busy': lobbyError('That game has already started. Ask the host to start a new one.'); break;
     case 'start':
-      if (S.role==='guest'){ S.wins={host:m.wins[0]|0, guest:m.wins[1]|0}; beginRound(m.seed>>>0, m.round|0); }
+      S.players=normPlayers(m.players); S.wins=normWins(m.wins);
+      beginRound(m.seed>>>0, m.round|0);
       break;
     case 'b':
-      if (m.r===S.round){ S.oppState=m; S.oppDirty=true; }
+      if (m.r===S.round && (m.from|0)!==S.myId){ S.opp[m.from|0]=m; S.oppDirty=true; }
       break;
     case 'atk':
       if (m.r===S.round && game && S.playing && !S.roundOver) game.addGarbage(Math.min(20, m.n|0));
       break;
-    case 'dead':
-      if (S.role==='host' && m.r===S.round) endRound('guest');
+    case 'out':
+      if (m.r===S.round) markOut(m.id|0);
       break;
     case 'end':
-      if (S.role==='guest' && m.r===S.round) applyRoundEnd(m.loser, {host:m.wins[0]|0, guest:m.wins[1]|0});
-      break;
-    case 'rematch':
-      if (S.role==='host' && matchOver()) startMatch();
+      if (m.r===S.round) applyRoundEnd(m.winner|0, normWins(m.wins));
       break;
     case 'bye':
-      connectionLost(`${S.oppName} left the game.`);
+      connectionLost(`${hostName()} ended the game.`);
       break;
   }
 }
-
-setInterval(()=>{
-  if (!S.connected || S.lost) return;
-  send({t:'ping'});
-  if (performance.now()-S.lastHeard > 10000) connectionLost();
-}, 2000);
-
 function connectionLost(msg){
-  if (S.lost || !S.connected){ if (!S.connected && S.role && $('#lobby').classList.contains('active') && conn) lobbyError(msg||'Connection closed.'); return; }
+  if (S.role!=='guest' || S.lost) return;
+  if (!S.connected){ lobbyError(msg || 'Connection closed.'); return; }
   S.lost=true; S.playing=false; clearTimers();
-  const text = msg || `Lost the connection to ${S.oppName}.`;
-  if ($('#game').classList.contains('active')){
-    ovShow(`<div class="ov-big lose" style="font-size:30px">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
-  } else {
-    lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
-  }
+  const text = msg || `Lost the connection to ${hostName()}.`;
+  if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
+  else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
   teardown();
 }
+
+/* ----- both ----- */
+setInterval(()=>{
+  const now=performance.now();
+  if (S.role==='host' && !S.lost){
+    [...S.links].forEach(([id,l])=>{ l.send({t:'ping'}); if (now-l.lastHeard>10000) removePlayer(id, `Lost the connection to ${l.name}.`); });
+  } else if (S.role==='guest' && S.connected && !S.lost){
+    toHost({t:'ping'});
+    if (now-S.lastHeard>10000) connectionLost();
+  }
+}, 2000);
+
 function teardown(){
   clearTimeout(S.joinTimer);
-  const n=S.net, c=conn, p=peer; S.net=null; conn=null; peer=null;
-  if (n) try{ n.close(); }catch(_){}
-  if (c) try{ c.close(); }catch(_){}
-  if (p) try{ p.destroy(); }catch(_){}
+  const links=[...S.links.values(), ...S.pending], hl=S.hostLink, ch=S.localCh, p=peer;
+  S.links=new Map(); S.pending=new Set(); S.hostLink=null; S.localCh=null; peer=null;
+  setTimeout(()=>{                              // brief pause so a goodbye message can go out first
+    links.forEach(l=>{ try{ l.close(); }catch(_){} });
+    if (hl) try{ hl.close(); }catch(_){}
+    if (ch) try{ ch.close(); }catch(_){}
+    if (p) try{ p.destroy(); }catch(_){}
+  }, 150);
+}
+function sayBye(){
+  if (S.lost) return;
+  if (S.role==='host') broadcast({t:'bye'});
+  else if (S.role==='guest' && S.connected) toHost({t:'bye'});
 }
 function leave(){
-  if (S.connected && !S.lost) send({t:'bye'});
-  S.connected=false; S.lost=false;
+  sayBye();
   clearTimers(); teardown();
-  S.playing=false; S.role=null; S.mode=null; game=null; ovHide();
-  releaseWake();
+  S.playing=false; S.role=null; S.mode=null; S.lost=false; S.connected=false; S.inMatch=false;
+  game=null; ovHide(); hideToast(); releaseWake();
   showScreen('menu');
 }
-window.addEventListener('pagehide',()=>{ if (S.connected && !S.lost) send({t:'bye'}); });
+window.addEventListener('pagehide', sayBye);
 
 /* ---------------- rounds ---------------- */
-function matchOver(){ return S.wins.host>=WINS_NEEDED || S.wins.guest>=WINS_NEEDED; }
-function startMatch(){ clearTimers(); S.wins={host:0,guest:0}; S.round=0; hostNextRound(); }
-function hostNextRound(){
-  if (!S.connected || S.lost) return;
-  S.round++;
-  const seed=(Math.random()*4294967296)>>>0;
-  send({t:'start', seed, round:S.round, wins:[S.wins.host,S.wins.guest]});
-  beginRound(seed, S.round);
-}
+function matchOver(){ return Object.values(S.wins).some(w=>w>=WINS_NEEDED); }
+function matchWinner(){ const e=Object.entries(S.wins).find(([,w])=>w>=WINS_NEEDED); return e ? +e[0] : -1; }
+
 function beginRound(seed, round){
   clearTimers();
   S.mode='versus'; S.round=round; S.roundOver=false; S.playing=false;
-  S.oppState=null; S.oppDirty=true; S.sentVer=-1;
+  S.alive=new Set(S.players.map(p=>p.id)); S.opp={}; S.oppDirty=true; S.sentVer=-1;
   game=new Game(seed,{timeLevels:true});
-  game.on('attack', n=>send({t:'atk', n, r:S.round}));
+  game.on('attack', sendAttack);
   game.on('dead', onMyDeath);
   game.start();
+  hideToast(); buildRivals();
   showScreen('game'); updateHud(); R.force=true; R.sec=-1;
   requestWake();
   countdown(()=>{ S.playing=true; sendBoard(true); });
@@ -741,6 +947,7 @@ function startPractice(){
   game=new Game((Math.random()*4294967296)>>>0,{timeLevels:false});
   game.on('dead', onMyDeath);
   game.start();
+  hideToast(); buildRivals();
   showScreen('game'); updateHud(); R.force=true; R.sec=-1;
   requestWake();
   countdown(()=>{ S.playing=true; });
@@ -748,13 +955,28 @@ function startPractice(){
 function countdown(done){
   let n=3;
   const pre = S.mode==='practice' ? 'Practice' : `Round ${S.round}`;
-  ovShow(`<div class="ov-sub">${pre}</div><div class="ov-big">${n}</div>`);
+  const sub = S.mode==='practice' ? '' : `<div class="ov-sub">${S.players.length} players</div>`;
+  ovShow(`<div class="ov-sub">${pre}</div><div class="ov-big">${n}</div>${sub}`);
   const step=()=>{
     n--;
-    if (n>0){ ovShow(`<div class="ov-sub">${pre}</div><div class="ov-big">${n}</div>`); later(step,700); }
+    if (n>0){ ovShow(`<div class="ov-sub">${pre}</div><div class="ov-big">${n}</div>${sub}`); later(step,700); }
     else { ovShow(`<div class="ov-big win">GO!</div>`); later(ovHide,450); done(); }
   };
   later(step,700);
+}
+// Each attack goes to a random rival who is still in, and a pop-up says who.
+function sendAttack(n){
+  if (S.mode!=='versus' || S.roundOver) return;
+  const targets=[...S.alive].filter(id=>id!==S.myId);
+  if (!targets.length) return;
+  const to=targets[Math.floor(Math.random()*targets.length)];
+  if (S.role==='host') routeAttack(to, n);
+  else toHost({t:'atk', to, n, r:S.round});
+  showToast(`+${n} ${n===1?'row':'rows'} → <b>${esc(nameOf(to))}</b>`);
+}
+function markOut(id){
+  S.alive.delete(id); S.oppDirty=true;
+  if (onGameScreen()) updateHud();
 }
 function onMyDeath(){
   S.playing=false; R.force=true;
@@ -764,29 +986,24 @@ function onMyDeath(){
     return;
   }
   sendBoard(true);
-  if (S.role==='guest'){
-    send({t:'dead', r:S.round});
-    if (!S.roundOver) ovShow(`<div class="ov-big lose" style="font-size:32px">Topped out</div><div class="ov-sub">Waiting…</div>`);
-  } else endRound('host');
+  if (!S.roundOver) ovShow(`<div class="ov-big lose mid-size">Topped out</div><div class="ov-sub">${S.alive.size>2?'Watching the others…':'Waiting…'}</div>`);
+  if (S.role==='guest') toHost({t:'dead', r:S.round});
+  else eliminate(S.myId);
 }
-function endRound(loser){
+function applyRoundEnd(winner, wins){
   if (S.roundOver) return;
-  const wins={...S.wins}; wins[loser==='host'?'guest':'host']++;
-  send({t:'end', r:S.round, loser, wins:[wins.host,wins.guest]});
-  applyRoundEnd(loser, wins);
-  if (!matchOver()) later(hostNextRound, 3800);
-}
-function applyRoundEnd(loser, wins){
-  S.roundOver=true; S.playing=false; S.wins=wins; updateHud(); sendBoard(true);
-  const me=S.role, op=me==='host'?'guest':'host', iWon = loser!==me;
+  S.roundOver=true; S.playing=false; S.wins=wins;
+  S.alive=new Set([winner]); S.oppDirty=true; hideToast();
+  updateHud(); sendBoard(true);
+  const iWon = winner===S.myId;
   if (matchOver()){
-    const mw = S.wins[me]>=WINS_NEEDED;
-    ovShow(`<div class="ov-big ${mw?'win':'lose'}">${mw?'You win!':'You lose'}</div>
-      <div class="ov-sub">Match ${S.wins[me]}–${S.wins[op]} against ${esc(S.oppName)}</div>
+    const champ=matchWinner(), me=champ===S.myId;
+    ovShow(`<div class="ov-big ${me?'win':'lose'}${me?'':' mid-size'}">${me?'You win!':`${esc(nameOf(champ))} wins!`}</div>
+      <div class="ov-sub">${standings()}</div>
       <button class="btn primary" data-ov="rematch">Rematch</button><button class="btn" data-ov="menu">Leave</button>`);
   } else {
     ovShow(`<div class="ov-big ${iWon?'win':'lose'}">${iWon?'Round won':'Round lost'}</div>
-      <div class="ov-sub">${S.wins[me]}–${S.wins[op]}<br>Next round starting…</div>`);
+      <div class="ov-sub">${iWon?'':`${esc(nameOf(winner))} took the round<br>`}${standings()}<br>Next round starting…</div>`);
   }
 }
 $('#overlay').addEventListener('click',e=>{
@@ -795,25 +1012,26 @@ $('#overlay').addEventListener('click',e=>{
   if (a==='menu') leave();
   else if (a==='again') startPractice();
   else if (a==='rematch'){
-    if (!S.connected || S.lost){ leave(); return; }
+    if (S.lost){ leave(); return; }
     if (S.role==='host') startMatch();
-    else { send({t:'rematch'}); b.textContent='Starting…'; b.disabled=true; }
+    else { toHost({t:'rematch'}); b.textContent='Starting…'; b.disabled=true; }
   }
 });
 
 function sendBoard(force){
-  if (S.mode!=='versus' || !game || !S.net) return;
+  if (S.mode!=='versus' || !game || S.lost) return;
   const now=performance.now();
   if (!force && (now-S.lastSent<90 || game.version===S.sentVer)) return;
   S.lastSent=now; S.sentVer=game.version;
-  send({t:'b', r:S.round, s:game.snapshot(), p:game.pendingTotal(), sc:game.score, l:game.lines, d:game.dead});
+  const m={t:'b', r:S.round, s:game.snapshot(), p:game.pendingTotal(), sc:game.score, l:game.lines, d:game.dead};
+  if (S.role==='host') broadcast({...m, from:S.myId}); else toHost(m);
 }
 
 /* ---------------- screen wake lock (keeps the phone awake) ---------------- */
 let wake=null;
 async function requestWake(){ try{ if ('wakeLock' in navigator && !wake){ wake=await navigator.wakeLock.request('screen'); wake.addEventListener('release',()=>{ wake=null; }); } }catch(_){ wake=null; } }
 function releaseWake(){ try{ if (wake) wake.release(); }catch(_){}; wake=null; }
-document.addEventListener('visibilitychange',()=>{ if (document.visibilityState==='visible' && game && $('#game').classList.contains('active')) requestWake(); });
+document.addEventListener('visibilitychange',()=>{ if (document.visibilityState==='visible' && game && onGameScreen()) requestWake(); });
 
 /* ---------------- touch controls ---------------- */
 let G=null;
@@ -862,7 +1080,7 @@ function endGesture(e, cancelled){
 }
 zone.addEventListener('pointerup',e=>endGesture(e,false));
 zone.addEventListener('pointercancel',e=>endGesture(e,true));
-document.addEventListener('touchmove',e=>{ if ($('#game').classList.contains('active')) e.preventDefault(); },{passive:false});
+document.addEventListener('touchmove',e=>{ if (onGameScreen()) e.preventDefault(); },{passive:false});
 document.addEventListener('gesturestart',e=>e.preventDefault());
 
 /* keyboard (for testing on a computer) */
@@ -884,7 +1102,7 @@ document.addEventListener('keydown',e=>{
 function loadName(){ try{ return localStorage.getItem('bd_name')||''; }catch(_){ return ''; } }
 function saveName(n){ try{ localStorage.setItem('bd_name',n); }catch(_){} }
 $('#nameIn').value=loadName();
-function readName(){ const n=$('#nameIn').value.trim().slice(0,12)||'Player'; S.myName=n; saveName(n); return n; }
+function readName(){ const n=cleanName($('#nameIn').value); S.myName=n; saveName(n); return n; }
 $('#hostBtn').addEventListener('click',()=>{ $('#menuErr').textContent=''; readName(); hostGame(); });
 $('#joinBtn').addEventListener('click',()=>{
   const code=$('#codeIn').value.trim().toUpperCase().replace(/[^A-Z]/g,'');
@@ -895,10 +1113,10 @@ $('#codeIn').addEventListener('input',e=>{ e.target.value=e.target.value.toUpper
 $('#codeIn').addEventListener('keydown',e=>{ if (e.key==='Enter') $('#joinBtn').click(); });
 $('#soloBtn').addEventListener('click',()=>{ readName(); startPractice(); });
 $('#quitBtn').addEventListener('click',()=>{
-  if (S.mode==='versus' && S.connected && !S.lost && !confirm('Leave the match?')) return;
+  if (S.mode==='versus' && !S.lost && !confirm('Leave the match?')) return;
   leave();
 });
-window.addEventListener('resize',()=>{ if ($('#game').classList.contains('active')) layout(); });
+window.addEventListener('resize',()=>{ if (onGameScreen()) layout(); });
 
 /* ---------------- main loop ---------------- */
 let last=performance.now();
