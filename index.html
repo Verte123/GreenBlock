@@ -122,11 +122,24 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
 .ov-sub{font-size:15px;color:var(--muted);line-height:1.45}
 #toast{position:absolute;left:11px;right:0;top:24%;display:flex;justify-content:center;pointer-events:none;z-index:3}
 #toastPill{background:rgba(18,19,28,.8);border:1px solid var(--amber);color:var(--amber);font-weight:800;font-size:15px;padding:7px 14px;border-radius:999px;
-  white-space:nowrap;max-width:94%;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(-6px);transition:opacity .15s,transform .15s}
+  white-space:normal;text-align:center;line-height:1.25;max-width:92%;overflow-wrap:anywhere;opacity:0;transform:translateY(-6px);transition:opacity .15s,transform .15s}
 #toastPill.show{opacity:1;transform:none}
 #toastPill b{color:var(--ink)}
 #toastPill.info{border-color:var(--line);color:var(--muted)}
 .hint{font-size:11px;color:var(--muted);text-align:center}
+/* power-up buttons */
+.pw{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:6px 2px 5px;border-radius:12px;background:var(--panel2);border:1.5px solid var(--amber)}
+.pw svg{width:40px;height:40px;display:block;pointer-events:none}
+.pwlbl{font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--amber);white-space:nowrap;pointer-events:none}
+.pw:active{transform:translateY(1px);filter:brightness(.92)}
+.pw:disabled{opacity:.45}
+.pw.used{opacity:.3;border-color:var(--line);filter:grayscale(1)}
+.pw.used .pwlbl{color:var(--muted)}
+#sideR.tight .stat.lv{display:none}
+#sideR.tight .stat{padding:0}
+#sideR.tight .stat .v{font-size:14px}
+#sideR.tighter .pw svg{width:28px;height:28px}
+#sideR.tighter .pwlbl{font-size:8px}
 </style>
 </head>
 <body>
@@ -154,8 +167,9 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
     <p>Two or three phones on the <b>same Wi-Fi</b>. One player taps <b>Host</b> and reads out the 4-letter code; the others type it in and tap <b>Join</b>. The host taps <b>Start</b> when everyone is in.</p>
     <p><b>Tap</b> to rotate · <b>drag</b> sideways to move · <b>drag down</b> to soft drop · <b>flick down</b> to slam · <b>flick up</b> to hold.</p>
     <p>Clearing 2, 3 or 4 lines at once sends 1, 2 or 4 grey rows to a <b>random rival</b> (more for combos and back-to-back fours) — a pop-up tells you who got them. Clearing lines also cancels rows heading your way: watch the red bar. Last board standing wins the round; first to 2 rounds wins.</p>
+    <p><b>Power-ups</b> (each once per round): the <b>bulldozer</b> clears your bottom 3 rows — nothing is sent to rivals. The <b>lightning bolt</b> makes every rival's next piece fall at double speed.</p>
   </details>
-  <div class="ver">v2.1 · 2–3 players</div>
+  <div class="ver">v3 · 2–3 players · power-ups</div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -183,9 +197,28 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
     </div>
     <div class="side" id="sideR">
       <div class="box"><div class="lbl">NEXT</div><canvas id="nextCv"></canvas></div>
-      <div class="stat"><div class="lbl">LEVEL</div><div class="v" id="levelV">1</div></div>
+      <div class="stat lv"><div class="lbl">LEVEL</div><div class="v" id="levelV">1</div></div>
       <div class="stat"><div class="lbl">LINES</div><div class="v" id="linesV">0</div></div>
       <div class="stat vs-only"><div class="lbl">SENT</div><div class="v" id="sentV">0</div></div>
+      <button class="pw" id="pwClear" data-pw="clear" aria-label="Bulldozer: clear your bottom 3 rows">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="38.5" y="27" width="7" height="7" rx="1.6" fill="#48b6ff"/><rect x="38.5" y="19.5" width="7" height="7" rx="1.6" fill="#ff6b81"/><rect x="41" y="12" width="6" height="6" rx="1.4" fill="#3ee0a1" transform="rotate(14 44 15)"/>
+        <path d="M33.5 15.5c3.6 7 3.6 14 0 21h3.4c3.4-7 3.4-14 0-21z" fill="#b8bdd8"/>
+        <rect x="27" y="27.5" width="7.5" height="3.2" rx="1" fill="#c98a12"/>
+        <rect x="25" y="12.5" width="2.6" height="9.5" rx="1" fill="#596079"/>
+        <path d="M9.5 22.5V12h11.5l3.4 10.5z" fill="#ffb03b"/><path d="M12 20.5v-6.2h7.4l2 6.2z" fill="#bfe6ff"/>
+        <rect x="5.5" y="21.5" width="24" height="10.5" rx="2.4" fill="#ffb03b"/><rect x="5.5" y="21.5" width="24" height="3" rx="1.5" fill="#ffd27a"/>
+        <rect x="3.5" y="32" width="29" height="9.5" rx="4.75" fill="#2a2d3d"/>
+        <circle cx="8.6" cy="36.75" r="2.7" fill="#8b90b2"/><circle cx="18" cy="36.75" r="2.7" fill="#8b90b2"/><circle cx="27.4" cy="36.75" r="2.7" fill="#8b90b2"/>
+      </svg>
+      <span class="pwlbl">CLEAR 3</span></button>
+      <button class="pw vs-only" id="pwSpeed" data-pw="speed" aria-label="Lightning: rivals' next piece falls at double speed">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <g stroke="#8b90b2" stroke-width="2.6" stroke-linecap="round"><path d="M3 16h7"/><path d="M1.5 24h8"/><path d="M3 32h7"/></g>
+        <path d="M29.5 3.5 12.5 27h10.5l-4.5 17.5L37.5 19H26.5l6-15.5z" fill="#f2df5b" stroke="#c98a12" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M27.5 7.5 17 22.5h4" fill="none" stroke="#fff7c2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="pwlbl">2× SPEED</span></button>
     </div>
   </div>
   <div class="hint">tap rotate · drag move · flick ↓ drop · flick ↑ hold</div>
@@ -206,7 +239,7 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
    ===================================================================== */
 
 const PEERJS_URL  = 'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';
-const PROTO       = 2;
+const PROTO       = 3;
 const ID_PREFIX   = 'greenblock-v2-';
 const LOCAL       = new URLSearchParams(location.search).has('local');
 const COLS = 10, ROWS = 22, HIDDEN = 2, VIS = ROWS - HIDDEN;
@@ -265,6 +298,7 @@ class Game {
     this.timeLevels = timeLevels;
     this.dropAcc = 0; this.lockAcc = 0; this.lockResets = 0; this.lowest = 0;
     this.flashes = []; this.events = {}; this.version = 0; this.cur = null;
+    this.boostPending = 0;                 // pieces still to come at double speed (lightning power-up)
   }
   on(n,fn){ this.events[n]=fn; return this; }
   emit(n,...a){ if (this.events[n]) this.events[n](...a); }
@@ -281,7 +315,8 @@ class Game {
   spawn(type){
     if (!type){ type=this.queue.shift(); this.queue.push(this.nextFromBag()); }
     const m = MATS[type].map(r=>r.slice());
-    const p = {type, m, rot:0, x: type==='O'?4:3, y: HIDDEN - this.topRow(m)};
+    const p = {type, m, rot:0, x: type==='O'?4:3, y: HIDDEN - this.topRow(m), boost:false};
+    if (this.boostPending>0){ p.boost=true; this.boostPending--; }
     this.cur=p; this.dropAcc=0; this.lockAcc=0; this.lockResets=0; this.lowest=p.y;
     this.version++;
     if (this.collides(p.m,p.x,p.y)) this.die();
@@ -333,6 +368,7 @@ class Game {
   holdPiece(){
     if (!this.active() || !this.canHold) return false;
     const t=this.cur.type; this.canHold=false;
+    if (this.cur.boost) this.boostPending++;          // holding doesn't dodge a speed-up
     if (this.hold){ const h=this.hold; this.hold=t; this.spawn(h); } else { this.hold=t; this.spawn(); }
     return true;
   }
@@ -348,7 +384,7 @@ class Game {
     } else {
       this.lockAcc = 0;
       this.dropAcc += dt;
-      const g=this.gravityMs();
+      const g=this.gravityMs()/(this.cur.boost?2:1);
       while (this.dropAcc >= g){
         this.dropAcc -= g;
         if (!this.collides(this.cur.m,this.cur.x,this.cur.y+1)){ this.cur.y++; this.onDescend(); this.version++; }
@@ -395,6 +431,17 @@ class Game {
     }
     this.canHold = true;
     this.spawn();
+  }
+  // bulldozer power-up: remove the bottom n rows; nothing scored or sent
+  bulldoze(n){
+    if (!this.active()) return false;
+    const now=performance.now();
+    for (let i=0;i<n;i++){ this.board.pop(); this.board.unshift(new Array(COLS).fill(0)); }
+    for (let i=0;i<n;i++) this.flashes.push({row:ROWS-1-i, t:now});
+    const p=this.cur;
+    while (this.collides(p.m,p.x,p.y) && p.y>-4) p.y--;
+    this.version++;
+    return true;
   }
   addGarbage(n){
     if (this.dead || n<=0) return;
@@ -470,6 +517,10 @@ function layout(){
     L.mini=Math.max(3, Math.min(Math.floor(inner/COLS), Math.floor(avail/(n*VIS))));
     boxes.forEach(b=>sizeCanvas(b.querySelector('canvas'), L.mini*COLS, L.mini*VIS));
   }
+  const sr=$('#sideR'), limit=cell*VIS+2;
+  sr.classList.remove('tight','tighter');
+  if (sr.offsetHeight>limit) sr.classList.add('tight');
+  if (sr.offsetHeight>limit) sr.classList.add('tighter');
   tileCache.clear();
   R.force=true;
 }
@@ -506,6 +557,13 @@ function drawBoard(){
     p.m.forEach((row,r)=>row.forEach((v,c)=>{ if(v && gy+r>=HIDDEN){ rr(x,(p.x+c)*cs+pad,(gy+r-HIDDEN)*cs+pad,cs-2*pad,cs-2*pad,cs*0.2); x.stroke(); } }));
     x.globalAlpha=1;
     p.m.forEach((row,r)=>row.forEach((v,c)=>{ if(v && p.y+r>=HIDDEN) x.drawImage(tile(CIDX[p.type],cs),(p.x+c)*cs,(p.y+r-HIDDEN)*cs,cs,cs); }));
+    if (p.boost){
+      x.font=`800 ${12*DPR}px -apple-system,system-ui,sans-serif`; x.textAlign='right'; x.textBaseline='top';
+      x.fillStyle='#f2df5b'; x.fillText('2× SPEED', cv.width-6*DPR, 6*DPR);
+      x.strokeStyle='#f2df5b'; x.lineWidth=2*DPR; x.globalAlpha=.85;
+      p.m.forEach((row,r)=>row.forEach((v,c)=>{ if(v && p.y+r>=HIDDEN){ rr(x,(p.x+c)*cs+DPR,(p.y+r-HIDDEN)*cs+DPR,cs-2*DPR,cs-2*DPR,cs*0.24); x.stroke(); } }));
+      x.globalAlpha=1;
+    }
   }
   const now=performance.now();
   game.flashes = game.flashes.filter(f=>now-f.t<280);
@@ -522,6 +580,10 @@ function drawSide(){
   const n=$('#nextCv'), nx=n.getContext('2d'); nx.clearRect(0,0,n.width,n.height);
   const slot=n.height/3;
   for (let i=0;i<3;i++) drawPreview(nx,game.queue[i],n.width/2,slot*i+slot/2,i===0?pcs:Math.floor(pcs*0.8),false);
+  if (game.boostPending>0){
+    nx.font=`800 ${10*DPR}px -apple-system,system-ui,sans-serif`; nx.textAlign='right'; nx.textBaseline='top';
+    nx.fillStyle='#f2df5b'; nx.fillText('2×', n.width-2*DPR, 0);
+  }
 }
 function drawRivals(){
   document.querySelectorAll('#rivals .rival').forEach(box=>{
@@ -566,6 +628,7 @@ const S = {
   round:0, wins:{}, alive:new Set(), roundOver:false, playing:false,
   opp:{}, oppDirty:false, lastHeard:0, lastSent:0, sentVer:-1,
   timers:[], joinTimer:null,
+  pw:{clear:false, speed:false},   // power-ups still available this round
 };
 let game=null, peer=null;
 
@@ -753,6 +816,9 @@ function onHostMsg(link, m){
     case 'dead':
       if (m.r===S.round) eliminate(id);
       break;
+    case 'speed':
+      if (m.r===S.round && !S.roundOver && S.alive.has(id)) hostSpeed(id);
+      break;
     case 'rematch':
       if (matchOver()) startMatch();
       break;
@@ -812,7 +878,7 @@ function hostNextRound(){
   beginRound(seed, S.round);
 }
 function aloneEnd(text){
-  S.lost=true; S.playing=false; clearTimers();
+  S.lost=true; S.playing=false; clearTimers(); updatePowerUI();
   if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">No rivals left</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
   else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
   teardown();
@@ -882,6 +948,9 @@ function onGuestMsg(m){
     case 'out':
       if (m.r===S.round) markOut(m.id|0);
       break;
+    case 'boost':
+      if (m.r===S.round && !S.roundOver) applyBoost();
+      break;
     case 'end':
       if (m.r===S.round) applyRoundEnd(m.winner|0, normWins(m.wins));
       break;
@@ -893,7 +962,7 @@ function onGuestMsg(m){
 function connectionLost(msg){
   if (S.role!=='guest' || S.lost) return;
   if (!S.connected){ lobbyError(msg || 'Connection closed.'); return; }
-  S.lost=true; S.playing=false; clearTimers();
+  S.lost=true; S.playing=false; clearTimers(); updatePowerUI();
   const text = msg || `Lost the connection to ${hostName()}.`;
   if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
   else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
@@ -948,10 +1017,11 @@ function beginRound(seed, round){
   game.on('attack', sendAttack);
   game.on('dead', onMyDeath);
   game.start();
+  S.pw={clear:true, speed:true}; updatePowerUI();
   hideToast(); buildRivals();
   showScreen('game'); updateHud(); R.force=true; R.sec=-1;
   requestWake();
-  countdown(()=>{ S.playing=true; sendBoard(true); });
+  countdown(()=>{ S.playing=true; updatePowerUI(); sendBoard(true); });
 }
 function startPractice(){
   clearTimers(); resetNet();
@@ -959,10 +1029,11 @@ function startPractice(){
   game=new Game((Math.random()*4294967296)>>>0,{timeLevels:false});
   game.on('dead', onMyDeath);
   game.start();
+  S.pw={clear:true, speed:false}; updatePowerUI();
   hideToast(); buildRivals();
   showScreen('game'); updateHud(); R.force=true; R.sec=-1;
   requestWake();
-  countdown(()=>{ S.playing=true; });
+  countdown(()=>{ S.playing=true; updatePowerUI(); });
 }
 function countdown(done){
   let n=3;
@@ -991,7 +1062,7 @@ function markOut(id){
   if (onGameScreen()) updateHud();
 }
 function onMyDeath(){
-  S.playing=false; R.force=true;
+  S.playing=false; R.force=true; updatePowerUI();
   if (S.mode==='practice'){
     ovShow(`<div class="ov-big lose">Game over</div><div class="ov-sub">${game.score.toLocaleString()} points · ${game.lines} lines</div>
       <button class="btn primary" data-ov="again">Play again</button><button class="btn" data-ov="menu">Menu</button>`);
@@ -1004,7 +1075,7 @@ function onMyDeath(){
 }
 function applyRoundEnd(winner, wins){
   if (S.roundOver) return;
-  S.roundOver=true; S.playing=false; S.wins=wins;
+  S.roundOver=true; S.playing=false; S.wins=wins; updatePowerUI();
   S.alive=new Set([winner]); S.oppDirty=true; hideToast();
   updateHud(); sendBoard(true);
   const iWon = winner===S.myId;
@@ -1029,6 +1100,45 @@ $('#overlay').addEventListener('click',e=>{
     else { toHost({t:'rematch'}); b.textContent='Starting…'; b.disabled=true; }
   }
 });
+
+/* ---------------- power-ups (each once per round) ---------------- */
+function updatePowerUI(){
+  [['clear','#pwClear','CLEAR 3'],['speed','#pwSpeed','2× SPEED']].forEach(([k,sel,label])=>{
+    const b=$(sel), avail=!!S.pw[k];
+    b.classList.toggle('used', !avail);
+    b.disabled = !avail || !S.playing;
+    b.querySelector('.pwlbl').textContent = avail ? label : 'USED';
+  });
+}
+function usePower(k){
+  if (!game || !S.playing || !S.pw[k]) return;
+  if (k==='clear'){
+    if (!game.bulldoze(3)) return;
+    S.pw.clear=false;
+    showToast('Bulldozed 3 rows!');
+    sendBoard(true);
+  } else if (k==='speed'){
+    if (S.mode!=='versus') return;
+    const targets=[...S.alive].filter(id=>id!==S.myId);
+    if (!targets.length) return;
+    S.pw.speed=false;
+    if (S.role==='host') hostSpeed(S.myId); else toHost({t:'speed', r:S.round});
+    showToast(targets.length===1 ? `⚡ <b>${esc(nameOf(targets[0]))}</b> sped up!` : `⚡ Rivals sped up!`);
+  }
+  updatePowerUI();
+}
+function hostSpeed(from){
+  [...S.alive].forEach(id=>{
+    if (id===from) return;
+    if (id===S.myId) applyBoost(); else sendTo(id, {t:'boost', r:S.round});
+  });
+}
+function applyBoost(){
+  if (!game || game.dead) return;
+  game.boostPending++; game.version++;
+  showToast('⚡ Next piece: 2× speed!');
+}
+$('#sideR').addEventListener('click',e=>{ const b=e.target.closest('.pw'); if (b && !b.disabled) usePower(b.dataset.pw); });
 
 function sendBoard(force){
   if (S.mode!=='versus' || !game || S.lost) return;
@@ -1141,6 +1251,8 @@ document.addEventListener('keydown',e=>{
   else if (k==='ArrowUp' || k==='x' || k==='X') game.rotate(1);
   else if (k==='z' || k==='Z') game.rotate(-1);
   else if (k==='c' || k==='C' || k==='Shift') game.holdPiece();
+  else if (k==='1') usePower('clear');
+  else if (k==='2') usePower('speed');
   else used=false;
   if (used) e.preventDefault();
 });
@@ -1178,7 +1290,7 @@ drawLogo();
 requestAnimationFrame(frame);
 
 // test hook (harmless in normal play)
-window.__bd = {S, get game(){ return game; }, checkZoom};
+window.__bd = {S, get game(){ return game; }, checkZoom, usePower};
 </script>
 </body>
 </html>
