@@ -71,6 +71,7 @@ details.how b{color:var(--ink)}
 .plist{width:100%;display:flex;flex-direction:column;gap:6px}
 .plist div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left}
 .plist span{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
+.mode-online{color:var(--mint)}
 .plist .empty{color:var(--muted);font-weight:500;border-style:dashed;justify-content:center}
 
 /* ---------- game ---------- */
@@ -169,7 +170,7 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
     <p>Clearing 2, 3 or 4 lines at once sends 1, 2 or 4 grey rows to a <b>random rival</b> (more for combos and back-to-back fours) — a pop-up tells you who got them. Clearing lines also cancels rows heading your way: watch the red bar. Last board standing wins the round; first to 2 rounds wins.</p>
     <p><b>Power-ups</b> (each once per round): the <b>bulldozer</b> clears your bottom 3 rows — nothing is sent to rivals. The <b>lightning bolt</b> makes every rival's next piece fall at double speed.</p>
   </details>
-  <div class="ver">v3.1 · 2–3 players · power-ups<span id="relayState"></span></div>
+  <div class="ver">v3.2 · 2–3 players · power-ups<span id="netState"></span></div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -239,9 +240,9 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
    ===================================================================== */
 
 const PEERJS_URL  = window.__GB_PEERJS_URL || 'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';
-// Cloudflare Worker that hands out TURN relay passwords (see relay/greenblock-relay-worker.js).
-// Leave empty to play without the relay (same Wi-Fi only).
-const RELAY_URL   = window.__GB_RELAY_URL ?? '';
+// Free Cloudflare game-room server (see server/). Lets phones play over mobile data.
+// Leave empty to play direct only (all phones on the same Wi-Fi).
+const ROOMS_URL   = window.__GB_ROOMS_URL ?? '';
 const PROTO       = 3;
 const ID_PREFIX   = 'greenblock-v2-';
 const LOCAL       = new URLSearchParams(location.search).has('local');
@@ -685,19 +686,16 @@ const standings = () => S.players.map(p=>`${esc(p.name)} ${S.wins[p.id]|0}`).joi
 /* ---------------- lobby ---------------- */
 function lobby(html){ $('#lobbyBody').innerHTML=html; showScreen('lobby'); }
 function playerRows(){
-  return S.players.map(p=>{
-    let tag = p.id===0 ? 'host' : (p.id===S.myId ? 'you' : 'joined ✓');
-    if (S.role==='host' && p.id!==0){ const l=S.links.get(p.id), k=l && kindLabel(l.kind); if (k) tag+=' · '+k; }
-    if (S.role==='guest' && p.id===0 && kindLabel(S.hostKind)) tag+=' · '+kindLabel(S.hostKind);
-    return `<div>${esc(p.name)}<span>${tag}</span></div>`;
-  }).join('');
+  return S.players.map(p=>`<div>${esc(p.name)}<span>${p.id===0?'host':(p.id===S.myId?'you':'joined ✓')}</span></div>`).join('');
 }
+const modeLine = () => modeNote() ? `<div class="small mode-${S.netMode}">${modeNote()}</div>` : '';
 function hostLobby(){
   if (S.role!=='host' || S.inMatch || S.lost) return;
   const n=S.players.length;
   lobby(`<div class="lab">Your game code</div><div class="bigcode">${esc(S.code)}</div>
     <div class="small">On the other phones, type this code and tap <b>Join</b>. Up to ${MAX_PLAYERS} players.</div>
     <div class="plist">${playerRows()}${n<MAX_PLAYERS?'<div class="empty">Waiting for players…</div>':''}</div>
+    ${modeLine()}
     <button class="btn primary" data-act="start"${n<2?' disabled':''}>${n<2?'Start match':`Start match · ${n} players`}</button>
     <button class="btn" data-act="cancel">Cancel</button>`);
 }
@@ -705,6 +703,7 @@ function guestLobby(){
   if (S.role!=='guest' || S.lost) return;
   lobby(`<div class="ok">✓ Joined ${esc(hostName())}'s game</div>
     <div class="plist">${playerRows()}</div>
+    ${modeLine()}
     <div class="spinner"></div><div class="small">Waiting for ${esc(hostName())} to start the match…</div>
     <button class="btn" data-act="cancel">Leave</button>`);
 }
@@ -738,92 +737,124 @@ function friendlyErr(err){
   return 'Connection problem' + (t?` (${t})`:'') + '. Please try again.';
 }
 function resetNet(){
-  S.hostKind='';
+  S.netMode='';
   S.players=[]; S.links=new Map(); S.pending=new Set(); S.hostLink=null; S.localCh=null;
   S.connected=false; S.lost=false; S.inMatch=false;
   S.wins={}; S.alive=new Set(); S.opp={}; S.round=0; S.lastHeard=performance.now();
 }
 function parseData(d){ if (typeof d==='string'){ try{ return JSON.parse(d); }catch(_){ return null; } } return d; }
 
-/* ----- relay (TURN) for mobile data ----- */
-// Phones try to connect directly first; the relay is only used if that fails.
-const DEFAULT_ICE = [{urls:'stun:stun.l.google.com:19302'}];
-const relay = {servers:null, at:0, state: RELAY_URL ? 'checking' : 'off'};
-function showRelayState(){
-  const t={off:'', checking:' · relay…', ready:' · mobile data ✓', unavailable:' · relay unavailable'}[relay.state];
-  $('#relayState').textContent = t || '';
+/* ----- connections ----- */
+// Online: every phone connects to a small free "room" on Cloudflare named after the game code,
+// which passes messages between the host and the others. Works on Wi-Fi and mobile data.
+// Direct: phones connect straight to each other with PeerJS (same Wi-Fi only). Used if the
+// room server isn't set up or can't be reached (e.g. its free daily limit has been reached).
+const ROOMS_HTTP = ROOMS_URL.replace(/^ws/, 'http');
+const net = {state: ROOMS_URL ? 'checking' : 'off'};
+function showNetState(){
+  $('#netState').textContent = {off:'', checking:'', online:' · online ✓', offline:' · online unavailable'}[net.state] || '';
 }
-async function getIceServers(){
-  if (!RELAY_URL) return DEFAULT_ICE;
-  if (relay.servers && performance.now()-relay.at < 60*60*1000) return relay.servers;
+async function checkRooms(){
+  if (!ROOMS_URL) return;
   try{
     const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(), 6000);
-    const r=await fetch(RELAY_URL, {signal:ctl.signal, cache:'no-store'});
+    const r=await fetch(ROOMS_HTTP + '/', {signal:ctl.signal, cache:'no-store'});
     clearTimeout(t);
-    if (!r.ok) throw new Error('relay '+r.status);
-    const d=await r.json();
-    if (!Array.isArray(d.iceServers) || !d.iceServers.length) throw new Error('relay empty');
-    relay.servers=[...d.iceServers, ...DEFAULT_ICE]; relay.at=performance.now(); relay.state='ready';
-  }catch(_){ relay.servers=null; relay.state='unavailable'; }
-  showRelayState();
-  return relay.servers || DEFAULT_ICE;
+    net.state = r.ok ? 'online' : 'offline';
+  }catch(_){ net.state='offline'; }
+  showNetState();
 }
-function peerOptions(iceServers){
-  const config={iceServers};
-  if (window.__GB_ICE_POLICY) config.iceTransportPolicy=window.__GB_ICE_POLICY;   // testing only
-  return Object.assign({debug:1, config}, window.__GB_PEER_OPTS || {});
+function peerOptions(){
+  return Object.assign({debug:1, config:{iceServers:[{urls:'stun:stun.l.google.com:19302'}]}}, window.__GB_PEER_OPTS || {});
 }
-// Works out whether a connection went direct or through the relay (shown in the lobby).
-async function connKind(pc){
-  try{
-    const st=await pc.getStats(); let pair=null;
-    st.forEach(s=>{ if (s.type==='transport' && s.selectedCandidatePairId) pair=st.get(s.selectedCandidatePairId); });
-    if (!pair) st.forEach(s=>{ if (s.type==='candidate-pair' && (s.selected || (s.nominated && s.state==='succeeded'))) pair=s; });
-    if (!pair) return '';
-    const l=st.get(pair.localCandidateId), r=st.get(pair.remoteCandidateId);
-    return ((l && l.candidateType==='relay') || (r && r.candidateType==='relay')) ? 'relay' : 'direct';
-  }catch(_){ return ''; }
+const newCid = () => 'c' + Math.random().toString(36).slice(2,10).padEnd(8,'0');
+
+// A "hub channel" carries {from, to, m} messages between the host and guests.
+function localChannel(code){            // ?local testing: tabs of one browser
+  const bc=new BroadcastChannel('gb-'+code);
+  const ch={kind:'local', onmsg:null, onclose:null, post:o=>{ try{ bc.postMessage(o); }catch(_){} }, close:()=>{ try{ bc.close(); }catch(_){} }};
+  bc.onmessage=e=>{ if (ch.onmsg) ch.onmsg(e.data); };
+  return ch;
 }
-function detectKind(conn, done){
-  const pc=conn && conn.peerConnection; if (!pc) return;
-  let tries=0;
-  const go=()=>connKind(pc).then(k=>{ if (k) done(k); else if (++tries<4) setTimeout(go, 800); });
-  setTimeout(go, 400);
+function openRoom(code, role, cid){     // online: WebSocket to the Cloudflare room
+  return new Promise((resolve, reject)=>{
+    let ws, settled=false;
+    const ch={kind:'online', onmsg:null, onclose:null,
+      post:o=>{ try{ if (ws && ws.readyState===1) ws.send(JSON.stringify(o)); }catch(_){} },
+      close:()=>{ try{ ws.close(1000); }catch(_){} }};
+    const fail=why=>{ if (settled) return; settled=true; clearTimeout(timer); try{ ws.close(); }catch(_){}; reject(why); };
+    const timer=setTimeout(()=>fail('unreachable'), 7000);
+    try{ ws=new WebSocket(`${ROOMS_URL.replace(/\/$/,'')}/room/${code}?role=${role}&cid=${cid}`); }
+    catch(_){ fail('unreachable'); return; }
+    ws.onmessage=e=>{
+      let d; try{ d=JSON.parse(e.data); }catch(_){ return; }
+      if (!settled){
+        if (d && d.sys==='ok'){ settled=true; clearTimeout(timer); net.state='online'; showNetState(); resolve(ch); }
+        else if (d && d.sys) fail(d.sys);          // taken | noroom | full
+        return;
+      }
+      if (ch.onmsg) ch.onmsg(d);
+    };
+    ws.onerror=()=>{ if (!settled){ net.state='offline'; showNetState(); } fail('unreachable'); };
+    ws.onclose=()=>{ if (!settled) fail('unreachable'); else if (ch.onclose) ch.onclose(); };
+  });
 }
-const kindLabel = k => k==='relay' ? 'via relay' : k==='direct' ? 'direct' : '';
+function hostHub(ch){
+  const byCid=new Map(); S.localCh=ch;
+  ch.onmsg=d=>{
+    if (!d || d.to!=='host' || S.localCh!==ch || !d.m) return;
+    let link=byCid.get(d.from);
+    if (!link){
+      if (d.m.t!=='hello') return;
+      const cid=d.from;
+      link={id:null, name:'', lastHeard:performance.now(), send:o=>ch.post({from:'host', to:cid, m:o}), close:()=>byCid.delete(cid)};
+      byCid.set(cid, link); S.pending.add(link);
+    }
+    if (d.m.t==='gone'){ linkClosed(link, true); return; }
+    onHostMsg(link, d.m);
+  };
+  ch.onclose=()=>{ if (S.localCh===ch && S.role==='host' && !S.lost) aloneEnd('Lost the connection to the game server.'); };
+}
+function guestHub(ch, cid){
+  S.localCh=ch;
+  ch.onmsg=d=>{
+    if (!d || d.to!==cid || S.localCh!==ch || !d.m) return;
+    if (d.m.t==='gone') connectionLost(); else onGuestMsg(d.m);
+  };
+  ch.onclose=()=>{ if (S.localCh===ch) connectionLost('Lost the connection to the game server.'); };
+  S.hostLink={send:o=>ch.post({from:cid, to:'host', m:o}), close:()=>{}};
+  sendHello();
+}
+const modeNote = () => S.netMode==='online' ? 'Online game — Wi-Fi or mobile data'
+                    : S.netMode==='direct' ? (ROOMS_URL ? 'Direct game (online rooms unavailable) — all phones on the same Wi-Fi' : 'Direct game — all phones on the same Wi-Fi') : '';
 
 /* ----- host side ----- */
-async function hostGame(){
+async function hostGame(attempt=0){
   resetNet(); S.role='host'; S.mode='versus'; S.myId=0;
   S.players=[{id:0, name:S.myName}];
   lobby(`<div class="spinner"></div><div class="small">Creating game…</div><button class="btn" data-act="cancel">Cancel</button>`);
   const code=genCode(); S.code=code;
-  if (LOCAL){
-    const ch=new BroadcastChannel('gb-'+code); S.localCh=ch;
-    const byCid=new Map();
-    ch.onmessage=e=>{
-      const d=e.data; if (!d || d.to!=='host' || S.localCh!==ch) return;
-      let link=byCid.get(d.from);
-      if (!link){
-        const cid=d.from;
-        link={id:null, name:'', lastHeard:performance.now(), send:o=>{ try{ ch.postMessage({from:'host',to:cid,m:o}); }catch(_){} }, close:()=>byCid.delete(cid)};
-        byCid.set(cid, link); S.pending.add(link);
-      }
-      onHostMsg(link, d.m);
-    };
-    hostLobby(); return;
+  if (LOCAL){ S.netMode='local'; hostHub(localChannel(code)); hostLobby(); return; }
+  if (ROOMS_URL){
+    try{
+      const ch=await openRoom(code, 'host', 'host');
+      if (S.role!=='host' || S.code!==code){ ch.close(); return; }
+      S.netMode='online'; hostHub(ch); hostLobby(); return;
+    }catch(why){
+      if (S.role!=='host' || S.code!==code) return;
+      if (why==='taken' && attempt<3) return hostGame(attempt+1);   // code clash: pick another
+      // anything else: fall back to direct play below
+    }
   }
+  S.netMode='direct';
   try { await loadPeer(); } catch(e){ lobbyError(e.message); return; }
   if (S.role!=='host' || S.code!==code) return;
-  const iceServers=await getIceServers();
-  if (S.role!=='host' || S.code!==code) return;
-  const p=new Peer(ID_PREFIX+code.toLowerCase(), peerOptions(iceServers)); peer=p;
+  const p=new Peer(ID_PREFIX+code.toLowerCase(), peerOptions()); peer=p;
   p.on('open',()=>{ if (!S.inMatch && S.players.length===1) hostLobby(); });
   p.on('connection',c=>{
     const link={id:null, name:'', conn:c, lastHeard:performance.now(),
       send:o=>{ try{ if (c.open) c.send(o); }catch(_){} }, close:()=>{ try{ c.close(); }catch(_){} }};
     S.pending.add(link);
-    c.on('open',()=>detectKind(c, k=>{ link.kind=k; if (!S.inMatch) hostLobby(); }));
     c.on('data',d=>onHostMsg(link, parseData(d)));
     c.on('close',()=>linkClosed(link));
     c.on('error',()=>linkClosed(link));
@@ -886,9 +917,9 @@ function onHostMsg(link, m){
       break;
   }
 }
-function linkClosed(link){
+function linkClosed(link, lost){
   S.pending.delete(link);
-  if (link.id!=null && S.links.get(link.id)===link) removePlayer(link.id, `${link.name} left the game.`);
+  if (link.id!=null && S.links.get(link.id)===link) removePlayer(link.id, lost ? `Lost the connection to ${link.name}.` : `${link.name} left the game.`);
 }
 function routeAttack(to, n){
   if (n<=0 || !S.alive.has(to)) return;          // target already out: rows are lost
@@ -947,23 +978,26 @@ function aloneEnd(text){
 async function joinGame(code){
   resetNet(); S.role='guest'; S.mode='versus'; S.code=code; S.myId=-1;
   lobby(`<div class="spinner"></div><div class="small">Joining ${esc(code)}…</div><button class="btn" data-act="cancel">Cancel</button>`);
-  S.joinTimer=setTimeout(()=>{ if (!S.connected && S.role==='guest' && !S.lost) lobbyError("Couldn't connect. Check the code and try again." + (relay.state==='ready' ? '' : ' Without the mobile-data relay, both phones need to be on the same Wi-Fi.')); }, 30000);
-  if (LOCAL){
-    const ch=new BroadcastChannel('gb-'+code); S.localCh=ch;
-    const cid='c'+Math.random().toString(36).slice(2,10);
-    ch.onmessage=e=>{ const d=e.data; if (d && d.to===cid && S.localCh===ch) onGuestMsg(d.m); };
-    S.hostLink={send:o=>{ try{ ch.postMessage({from:cid,to:'host',m:o}); }catch(_){} }, close:()=>{}};
-    sendHello(); return;
+  S.joinTimer=setTimeout(()=>{ if (!S.connected && S.role==='guest' && !S.lost) lobbyError("Couldn't connect. Check the code and try again." + (S.netMode==='direct' ? ' For a direct game, all phones need to be on the same Wi-Fi.' : '')); }, 30000);
+  const cid=newCid();
+  if (LOCAL){ S.netMode='local'; guestHub(localChannel(code), cid); return; }
+  if (ROOMS_URL){
+    try{
+      const ch=await openRoom(code, 'guest', cid);
+      if (S.role!=='guest' || S.code!==code){ ch.close(); return; }
+      S.netMode='online'; guestHub(ch, cid); return;
+    }catch(why){
+      if (S.role!=='guest' || S.code!==code) return;
+      // no online room with this code, or rooms unreachable: try a direct game instead
+    }
   }
+  S.netMode='direct';
   try { await loadPeer(); } catch(e){ lobbyError(e.message); return; }
   if (S.role!=='guest' || S.code!==code) return;
-  const iceServers=await getIceServers();
-  if (S.role!=='guest' || S.code!==code) return;
-  const p=new Peer(peerOptions(iceServers)); peer=p;
+  const p=new Peer(peerOptions()); peer=p;
   p.on('open',()=>{
     const c=p.connect(ID_PREFIX+code.toLowerCase(), {reliable:true, serialization:'json'});
-    c.on('open',()=>{ S.hostLink={send:o=>{ try{ if (c.open) c.send(o); }catch(_){} }, close:()=>{ try{ c.close(); }catch(_){} }}; S.lastHeard=performance.now(); sendHello();
-      detectKind(c, k=>{ S.hostKind=k; if (!onGameScreen() && S.connected) guestLobby(); }); });
+    c.on('open',()=>{ S.hostLink={send:o=>{ try{ if (c.open) c.send(o); }catch(_){} }, close:()=>{ try{ c.close(); }catch(_){} }}; S.lastHeard=performance.now(); sendHello(); });
     c.on('data',d=>onGuestMsg(parseData(d)));
     c.on('close',()=>connectionLost());
     c.on('error',()=>connectionLost());
@@ -1205,7 +1239,7 @@ $('#sideR').addEventListener('click',e=>{ const b=e.target.closest('.pw'); if (b
 function sendBoard(force){
   if (S.mode!=='versus' || !game || S.lost) return;
   const now=performance.now();
-  if (!force && (now-S.lastSent<90 || game.version===S.sentVer)) return;
+  if (!force && (now-S.lastSent<(S.netMode==='online'?120:90) || game.version===S.sentVer)) return;
   S.lastSent=now; S.sentVer=game.version;
   const m={t:'b', r:S.round, s:game.snapshot(), p:game.pendingTotal(), sc:game.score, l:game.lines, d:game.dead};
   if (S.role==='host') broadcast({...m, from:S.myId}); else toHost(m);
@@ -1349,8 +1383,8 @@ function frame(t){
   requestAnimationFrame(frame);
 }
 drawLogo();
-showRelayState();
-if (RELAY_URL) getIceServers();
+showNetState();
+checkRooms();
 requestAnimationFrame(frame);
 
 // test hook (harmless in normal play)

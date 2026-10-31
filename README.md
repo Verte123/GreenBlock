@@ -22,20 +22,19 @@ In solo practice only the bulldozer is available.
 
 ## How it works
 
-Everything is in `index.html` — no build step. The phones connect directly using WebRTC via [PeerJS](https://peerjs.com/) (v1.5.5); PeerJS's free public server is only used to introduce them. The host's phone is the hub: the other phones connect to it, and it passes boards and attacks between them and decides who is out and who wins each round. Everyone gets the same piece sequence each round from a shared random seed.
+Everything the phones run is in `index.html` — no build step. The host's phone is the hub: it decides who is out and who wins each round, and passes boards and attacks between the other phones. Everyone gets the same piece sequence each round from a shared random seed.
 
-Because PeerJS no longer offers a free relay server, playing on mobile data or on different networks may fail to connect; on the same home Wi-Fi it should connect directly.
+The phones can be linked two ways:
 
-All phones must be on the same version (shown at the bottom of the menu, currently v3). If one says it has a different version, refresh the page on every phone.
+- **Online (Wi-Fi or mobile data).** Each game code gets a small "room" on Cloudflare's free Workers plan (`server/`). Every phone opens a WebSocket to the room, which passes messages between the host and the others. Used whenever `ROOMS_URL` in `index.html` is set and the room server can be reached.
+- **Direct (same Wi-Fi only).** Phones connect straight to each other with WebRTC via [PeerJS](https://peerjs.com/) (v1.5.5). Used if the room server isn't set up or can't be reached — for example if Cloudflare's free daily limit has been reached, in which case it stops for the day rather than charging.
 
-## Playing over mobile data (relay)
+The bottom of the menu shows "online ✓" when the room server is reachable, and the lobby says whether the game is online or direct.
 
-Phones on 4G/5G often can't connect to each other directly, so the game can use Cloudflare's TURN relay. Phones always try a direct connection first; the relay only carries the game when that fails.
+## The room server (`server/`)
 
-- `relay/greenblock-relay-worker.js` is a small Cloudflare Worker that hands out short-lived relay passwords. It needs two Worker secrets, `TURN_KEY_ID` and `TURN_KEY_API_TOKEN` (from Cloudflare dashboard → Realtime → TURN Server), and only answers requests from `https://verte123.github.io`.
-- In `index.html`, `RELAY_URL` holds the Worker's `workers.dev` address. If it is empty or the Worker can't be reached, the game still works on shared Wi-Fi.
-- The bottom of the menu shows the relay status ("mobile data ✓" when ready), and the lobby shows whether each player is connected "direct" or "via relay".
+A Cloudflare Worker with one SQLite-backed Durable Object per game code, deployed from this repo with Cloudflare's GitHub integration (root directory `server`, Worker name `greenblock-rooms`, deploy command `npx wrangler deploy`). It only accepts connections from `https://verte123.github.io`, and runs entirely on the free plan — no payment card.
 
 ## Testing on one computer
 
-Open `index.html?local` in several tabs of the same browser — they link through the browser instead of the internet. Host in one tab and join with the code in the others.
+Open `index.html?local` in several tabs of the same browser — they link through the browser instead of the internet. Host in one tab and join with the code in the others. To run the room server locally: `cd server && npx wrangler dev`.
