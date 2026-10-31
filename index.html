@@ -169,7 +169,7 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
     <p>Clearing 2, 3 or 4 lines at once sends 1, 2 or 4 grey rows to a <b>random rival</b> (more for combos and back-to-back fours) — a pop-up tells you who got them. Clearing lines also cancels rows heading your way: watch the red bar. Last board standing wins the round; first to 2 rounds wins.</p>
     <p><b>Power-ups</b> (each once per round): the <b>bulldozer</b> clears your bottom 3 rows — nothing is sent to rivals. The <b>lightning bolt</b> makes every rival's next piece fall at double speed.</p>
   </details>
-  <div class="ver">v3 · 2–3 players · power-ups</div>
+  <div class="ver">v3.1 · 2–3 players · power-ups<span id="relayState"></span></div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -238,7 +238,10 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
    the same browser without the internet (for testing).
    ===================================================================== */
 
-const PEERJS_URL  = 'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';
+const PEERJS_URL  = window.__GB_PEERJS_URL || 'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';
+// Cloudflare Worker that hands out TURN relay passwords (see relay/greenblock-relay-worker.js).
+// Leave empty to play without the relay (same Wi-Fi only).
+const RELAY_URL   = window.__GB_RELAY_URL ?? '';
 const PROTO       = 3;
 const ID_PREFIX   = 'greenblock-v2-';
 const LOCAL       = new URLSearchParams(location.search).has('local');
@@ -682,7 +685,12 @@ const standings = () => S.players.map(p=>`${esc(p.name)} ${S.wins[p.id]|0}`).joi
 /* ---------------- lobby ---------------- */
 function lobby(html){ $('#lobbyBody').innerHTML=html; showScreen('lobby'); }
 function playerRows(){
-  return S.players.map(p=>`<div>${esc(p.name)}<span>${p.id===0?'host':(p.id===S.myId?'you':'joined ✓')}</span></div>`).join('');
+  return S.players.map(p=>{
+    let tag = p.id===0 ? 'host' : (p.id===S.myId ? 'you' : 'joined ✓');
+    if (S.role==='host' && p.id!==0){ const l=S.links.get(p.id), k=l && kindLabel(l.kind); if (k) tag+=' · '+k; }
+    if (S.role==='guest' && p.id===0 && kindLabel(S.hostKind)) tag+=' · '+kindLabel(S.hostKind);
+    return `<div>${esc(p.name)}<span>${tag}</span></div>`;
+  }).join('');
 }
 function hostLobby(){
   if (S.role!=='host' || S.inMatch || S.lost) return;
@@ -730,11 +738,59 @@ function friendlyErr(err){
   return 'Connection problem' + (t?` (${t})`:'') + '. Please try again.';
 }
 function resetNet(){
+  S.hostKind='';
   S.players=[]; S.links=new Map(); S.pending=new Set(); S.hostLink=null; S.localCh=null;
   S.connected=false; S.lost=false; S.inMatch=false;
   S.wins={}; S.alive=new Set(); S.opp={}; S.round=0; S.lastHeard=performance.now();
 }
 function parseData(d){ if (typeof d==='string'){ try{ return JSON.parse(d); }catch(_){ return null; } } return d; }
+
+/* ----- relay (TURN) for mobile data ----- */
+// Phones try to connect directly first; the relay is only used if that fails.
+const DEFAULT_ICE = [{urls:'stun:stun.l.google.com:19302'}];
+const relay = {servers:null, at:0, state: RELAY_URL ? 'checking' : 'off'};
+function showRelayState(){
+  const t={off:'', checking:' · relay…', ready:' · mobile data ✓', unavailable:' · relay unavailable'}[relay.state];
+  $('#relayState').textContent = t || '';
+}
+async function getIceServers(){
+  if (!RELAY_URL) return DEFAULT_ICE;
+  if (relay.servers && performance.now()-relay.at < 60*60*1000) return relay.servers;
+  try{
+    const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(), 6000);
+    const r=await fetch(RELAY_URL, {signal:ctl.signal, cache:'no-store'});
+    clearTimeout(t);
+    if (!r.ok) throw new Error('relay '+r.status);
+    const d=await r.json();
+    if (!Array.isArray(d.iceServers) || !d.iceServers.length) throw new Error('relay empty');
+    relay.servers=[...d.iceServers, ...DEFAULT_ICE]; relay.at=performance.now(); relay.state='ready';
+  }catch(_){ relay.servers=null; relay.state='unavailable'; }
+  showRelayState();
+  return relay.servers || DEFAULT_ICE;
+}
+function peerOptions(iceServers){
+  const config={iceServers};
+  if (window.__GB_ICE_POLICY) config.iceTransportPolicy=window.__GB_ICE_POLICY;   // testing only
+  return Object.assign({debug:1, config}, window.__GB_PEER_OPTS || {});
+}
+// Works out whether a connection went direct or through the relay (shown in the lobby).
+async function connKind(pc){
+  try{
+    const st=await pc.getStats(); let pair=null;
+    st.forEach(s=>{ if (s.type==='transport' && s.selectedCandidatePairId) pair=st.get(s.selectedCandidatePairId); });
+    if (!pair) st.forEach(s=>{ if (s.type==='candidate-pair' && (s.selected || (s.nominated && s.state==='succeeded'))) pair=s; });
+    if (!pair) return '';
+    const l=st.get(pair.localCandidateId), r=st.get(pair.remoteCandidateId);
+    return ((l && l.candidateType==='relay') || (r && r.candidateType==='relay')) ? 'relay' : 'direct';
+  }catch(_){ return ''; }
+}
+function detectKind(conn, done){
+  const pc=conn && conn.peerConnection; if (!pc) return;
+  let tries=0;
+  const go=()=>connKind(pc).then(k=>{ if (k) done(k); else if (++tries<4) setTimeout(go, 800); });
+  setTimeout(go, 400);
+}
+const kindLabel = k => k==='relay' ? 'via relay' : k==='direct' ? 'direct' : '';
 
 /* ----- host side ----- */
 async function hostGame(){
@@ -759,12 +815,15 @@ async function hostGame(){
   }
   try { await loadPeer(); } catch(e){ lobbyError(e.message); return; }
   if (S.role!=='host' || S.code!==code) return;
-  const p=new Peer(ID_PREFIX+code.toLowerCase(), {debug:1}); peer=p;
+  const iceServers=await getIceServers();
+  if (S.role!=='host' || S.code!==code) return;
+  const p=new Peer(ID_PREFIX+code.toLowerCase(), peerOptions(iceServers)); peer=p;
   p.on('open',()=>{ if (!S.inMatch && S.players.length===1) hostLobby(); });
   p.on('connection',c=>{
     const link={id:null, name:'', conn:c, lastHeard:performance.now(),
       send:o=>{ try{ if (c.open) c.send(o); }catch(_){} }, close:()=>{ try{ c.close(); }catch(_){} }};
     S.pending.add(link);
+    c.on('open',()=>detectKind(c, k=>{ link.kind=k; if (!S.inMatch) hostLobby(); }));
     c.on('data',d=>onHostMsg(link, parseData(d)));
     c.on('close',()=>linkClosed(link));
     c.on('error',()=>linkClosed(link));
@@ -888,7 +947,7 @@ function aloneEnd(text){
 async function joinGame(code){
   resetNet(); S.role='guest'; S.mode='versus'; S.code=code; S.myId=-1;
   lobby(`<div class="spinner"></div><div class="small">Joining ${esc(code)}…</div><button class="btn" data-act="cancel">Cancel</button>`);
-  S.joinTimer=setTimeout(()=>{ if (!S.connected && S.role==='guest' && !S.lost) lobbyError("Couldn't connect. Check the code, and that the phones are on the same Wi-Fi, then try again."); }, 20000);
+  S.joinTimer=setTimeout(()=>{ if (!S.connected && S.role==='guest' && !S.lost) lobbyError("Couldn't connect. Check the code and try again." + (relay.state==='ready' ? '' : ' Without the mobile-data relay, both phones need to be on the same Wi-Fi.')); }, 30000);
   if (LOCAL){
     const ch=new BroadcastChannel('gb-'+code); S.localCh=ch;
     const cid='c'+Math.random().toString(36).slice(2,10);
@@ -898,10 +957,13 @@ async function joinGame(code){
   }
   try { await loadPeer(); } catch(e){ lobbyError(e.message); return; }
   if (S.role!=='guest' || S.code!==code) return;
-  const p=new Peer({debug:1}); peer=p;
+  const iceServers=await getIceServers();
+  if (S.role!=='guest' || S.code!==code) return;
+  const p=new Peer(peerOptions(iceServers)); peer=p;
   p.on('open',()=>{
     const c=p.connect(ID_PREFIX+code.toLowerCase(), {reliable:true, serialization:'json'});
-    c.on('open',()=>{ S.hostLink={send:o=>{ try{ if (c.open) c.send(o); }catch(_){} }, close:()=>{ try{ c.close(); }catch(_){} }}; S.lastHeard=performance.now(); sendHello(); });
+    c.on('open',()=>{ S.hostLink={send:o=>{ try{ if (c.open) c.send(o); }catch(_){} }, close:()=>{ try{ c.close(); }catch(_){} }}; S.lastHeard=performance.now(); sendHello();
+      detectKind(c, k=>{ S.hostKind=k; if (!onGameScreen() && S.connected) guestLobby(); }); });
     c.on('data',d=>onGuestMsg(parseData(d)));
     c.on('close',()=>connectionLost());
     c.on('error',()=>connectionLost());
@@ -1287,6 +1349,8 @@ function frame(t){
   requestAnimationFrame(frame);
 }
 drawLogo();
+showRelayState();
+if (RELAY_URL) getIceServers();
 requestAnimationFrame(frame);
 
 // test hook (harmless in normal play)

@@ -28,6 +28,14 @@ Because PeerJS no longer offers a free relay server, playing on mobile data or o
 
 All phones must be on the same version (shown at the bottom of the menu, currently v3). If one says it has a different version, refresh the page on every phone.
 
+## Playing over mobile data (relay)
+
+Phones on 4G/5G often can't connect to each other directly, so the game can use Cloudflare's TURN relay. Phones always try a direct connection first; the relay only carries the game when that fails.
+
+- `relay/greenblock-relay-worker.js` is a small Cloudflare Worker that hands out short-lived relay passwords. It needs two Worker secrets, `TURN_KEY_ID` and `TURN_KEY_API_TOKEN` (from Cloudflare dashboard → Realtime → TURN Server), and only answers requests from `https://verte123.github.io`.
+- In `index.html`, `RELAY_URL` holds the Worker's `workers.dev` address. If it is empty or the Worker can't be reached, the game still works on shared Wi-Fi.
+- The bottom of the menu shows the relay status ("mobile data ✓" when ready), and the lobby shows whether each player is connected "direct" or "via relay".
+
 ## Testing on one computer
 
 Open `index.html?local` in several tabs of the same browser — they link through the browser instead of the internet. Host in one tab and join with the code in the others.
