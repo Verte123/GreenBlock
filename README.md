@@ -35,6 +35,8 @@ The bottom of the menu shows "online ✓" when the room server is reachable, and
 
 A Cloudflare Worker with one SQLite-backed Durable Object per game code, deployed from this repo with Cloudflare's GitHub integration (root directory `server`, Worker name `greenblock-rooms`, deploy command `npx wrangler deploy`). It only accepts connections from `https://verte123.github.io`, and runs entirely on the free plan — no payment card.
 
+Live address: `wss://greenblock-rooms.ric-green.workers.dev` (opening `https://greenblock-rooms.ric-green.workers.dev/` in a browser should say "GreenBlock game rooms are running.").
+
 ## Testing on one computer
 
 Open `index.html?local` in several tabs of the same browser — they link through the browser instead of the internet. Host in one tab and join with the code in the others. To run the room server locally: `cd server && npx wrangler dev`.

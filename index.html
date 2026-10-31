@@ -165,12 +165,12 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
   </div>
   <details class="how">
     <summary>How to play ▾</summary>
-    <p>Two or three phones on the <b>same Wi-Fi</b>. One player taps <b>Host</b> and reads out the 4-letter code; the others type it in and tap <b>Join</b>. The host taps <b>Start</b> when everyone is in.</p>
+    <p>Two or three phones, on <b>Wi-Fi or mobile data</b> (look for “online ✓” below). One player taps <b>Host</b> and reads out the 4-letter code; the others type it in and tap <b>Join</b>. The host taps <b>Start</b> when everyone is in.</p>
     <p><b>Tap</b> to rotate · <b>drag</b> sideways to move · <b>drag down</b> to soft drop · <b>flick down</b> to slam · <b>flick up</b> to hold.</p>
     <p>Clearing 2, 3 or 4 lines at once sends 1, 2 or 4 grey rows to a <b>random rival</b> (more for combos and back-to-back fours) — a pop-up tells you who got them. Clearing lines also cancels rows heading your way: watch the red bar. Last board standing wins the round; first to 2 rounds wins.</p>
     <p><b>Power-ups</b> (each once per round): the <b>bulldozer</b> clears your bottom 3 rows — nothing is sent to rivals. The <b>lightning bolt</b> makes every rival's next piece fall at double speed.</p>
   </details>
-  <div class="ver">v3.2 · 2–3 players · power-ups<span id="netState"></span></div>
+  <div class="ver">v3.3 · 2–3 players · power-ups<span id="netState"></span></div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -242,7 +242,7 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
 const PEERJS_URL  = window.__GB_PEERJS_URL || 'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';
 // Free Cloudflare game-room server (see server/). Lets phones play over mobile data.
 // Leave empty to play direct only (all phones on the same Wi-Fi).
-const ROOMS_URL   = window.__GB_ROOMS_URL ?? '';
+const ROOMS_URL   = window.__GB_ROOMS_URL ?? 'wss://greenblock-rooms.ric-green.workers.dev';
 const PROTO       = 3;
 const ID_PREFIX   = 'greenblock-v2-';
 const LOCAL       = new URLSearchParams(location.search).has('local');
@@ -759,8 +759,9 @@ async function checkRooms(){
   try{
     const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(), 6000);
     const r=await fetch(ROOMS_HTTP + '/', {signal:ctl.signal, cache:'no-store'});
+    const txt = r.ok ? await r.text() : '';
     clearTimeout(t);
-    net.state = r.ok ? 'online' : 'offline';
+    net.state = txt.includes('GreenBlock game rooms') ? 'online' : 'offline';   // make sure it really is the room server
   }catch(_){ net.state='offline'; }
   showNetState();
 }
