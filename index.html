@@ -108,6 +108,13 @@ details.how b{color:var(--ink)}
 .fb-chip.sel{border-color:var(--amber);color:var(--amber)}
 .fb-btns{display:flex;gap:8px;width:100%}
 .fb-btns .btn{flex:1}
+.fb-pws{display:flex;gap:6px}
+.fb-pw{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;padding:5px 4px;border-radius:10px;border:1.5px solid var(--amber);background:var(--panel2);font-size:12px;font-weight:800;color:var(--amber);white-space:nowrap}
+.fb-pw svg{width:22px;height:22px;flex:none}
+.fb-pw span{overflow:hidden;text-overflow:ellipsis}
+.fb-pw.on{background:var(--amber);color:#2a1800}
+.fb-pw.used{opacity:.32;filter:grayscale(1);border-color:var(--line);color:var(--muted)}
+.fb-pw:disabled:not(.used){opacity:.5}
 .fb-wait{font-size:13px;color:var(--muted);text-align:center;line-height:1.5}
 .fb-wait b{color:var(--mint)}
 
@@ -245,8 +252,9 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
     <p class="howh">FightyBoats</p>
     <p>Everyone hides five canal boats on their own 10×10 canal: <b>Narrowboat</b> (5), <b>Widebeam</b> (4), <b>Butty</b> (3), <b>Cruiser</b> (3) and <b>Tender</b> (2). Tap a boat, then tap the water to move it; tap it again to turn it. <b>Shuffle</b> places them at random.</p>
     <p>Take turns firing one shot. With three players, pick whose waters to fire into using the name tabs. Every shot is called out to all players. Sink a whole fleet and that player is out; the last fleet afloat wins.</p>
+    <p><b>Power-ups</b> (each once per game): <b>Move boat</b> — any time, without using your turn, move one boat into water nobody has fired at; a damaged boat keeps its damage, and your rivals are told. <b>Big bomb</b> — instead of a shot, hit two squares side by side (tap the square again to turn it across or down).</p>
   </details>
-  <div class="ver">v4 · GreenBlock + FightyBoats<span id="netState"></span></div>
+  <div class="ver">v4.1 · GreenBlock + FightyBoats<span id="netState"></span></div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -336,7 +344,7 @@ const PEERJS_URL  = window.__GB_PEERJS_URL || 'https://unpkg.com/peerjs@1.5.5/di
 // Free Cloudflare game-room server (see server/). Lets phones play over mobile data.
 // Leave empty to play direct only (all phones on the same Wi-Fi).
 const ROOMS_URL   = window.__GB_ROOMS_URL ?? 'wss://greenblock-rooms.ric-green.workers.dev';
-const PROTO       = 4;
+const PROTO       = 5;
 const ID_PREFIX   = 'greenblock-v2-';
 const LOCAL       = new URLSearchParams(location.search).has('local');
 const COLS = 10, ROWS = 22, HIDDEN = 2, VIS = ROWS - HIDDEN;
@@ -1500,6 +1508,6 @@ requestAnimationFrame(frame);
 // test hook (harmless in normal play)
 window.__bd = {S, get game(){ return game; }, checkZoom, usePower};
 </script>
-<script src="fightyboats.js?v=4"></script>
+<script src="fightyboats.js?v=4.1"></script>
 </body>
 </html>

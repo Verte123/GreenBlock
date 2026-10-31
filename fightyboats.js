@@ -4,6 +4,14 @@
    computer. Each phone keeps its own fleet secret and answers shots fired
    at it; the host's phone referees whose turn it is, who is out and who
    wins. Uses the lobby and connection code in index.html.
+
+   Power-ups, each once per game:
+   - Move a boat: any time during the battle, without using your turn. A hit
+     boat keeps its damage (the damaged sections move with it). It can only
+     move into water nobody has fired at. Rivals are told, and the old hit
+     marks fade.
+   - Big bomb: instead of a normal shot, hits two squares side by side
+     (across or down) in one rival's waters.
    ===================================================================== */
 
 const FB_N = 10;
@@ -19,6 +27,7 @@ const CPU = 99;                       // player id of the computer in solo games
 const fbCellName = c => FB_COLS[c % FB_N] + (Math.floor(c / FB_N) + 1);
 const fbShuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 const fbPick = a => a[Math.floor(Math.random()*a.length)];
+const fbRow = c => Math.floor(c/FB_N);
 
 const FB = {
   phase:'idle',          // idle | place | wait | battle | over
@@ -27,20 +36,24 @@ const FB = {
   fleet:[],              // my boats: {name,len,color,cells:[...],hits:Set}
   shots:{},              // targetId -> {cell: {hit, by}}   (every shot is public)
   sunk:{},               // targetId -> [{name,len,color,cells}]
+  faded:{},              // targetId -> Set of old hit squares whose boat has moved away
   reveal:{},             // id -> fleet, shown after the game
   answered:{},           // cell -> my answer (so a repeated question gets the same reply)
   view:-1, aim:-1, sel:-1, awaiting:false,
+  pw:{move:false, bomb:false},
+  aimMode:'shot', bombVert:false,     // big bomb aiming
+  moving:false, draft:null,           // move-a-boat mode
   log:[], tally:{}, winner:-1, last:null,
   dirty:true, bottomKey:'',
   ref:null,              // referee state — host phone (or solo) only
-  cpu:null,              // solo: the computer's fleet
+  cpu:null,              // solo: the computer's fleet and power-ups
 };
 const FBL = {lab:20, cell:32, mini:13};
 
 /* ---------------- fleets ---------------- */
 const fbIsH = cells => cells.length < 2 || cells[1] - cells[0] === 1;
 function fbBoatCells(bow, len, horiz){
-  const r=Math.floor(bow/FB_N), c=bow%FB_N;
+  const r=fbRow(bow), c=bow%FB_N;
   if (horiz ? c+len>FB_N : r+len>FB_N) return null;
   return Array.from({length:len}, (_,i)=> horiz ? bow+i : bow+i*FB_N);
 }
@@ -55,8 +68,7 @@ function fbRandomFleet(){
     for (const t of FB_FLEET){
       let placed=false;
       for (let k=0;k<300 && !placed;k++){
-        const horiz=Math.random()<0.5;
-        const cells=fbBoatCells(Math.floor(Math.random()*FB_N*FB_N), t.len, horiz);
+        const cells=fbBoatCells(Math.floor(Math.random()*FB_N*FB_N), t.len, Math.random()<0.5);
         if (cells && fbFits(boats, -1, cells)){ boats.push({...t, cells, hits:new Set()}); placed=true; }
       }
       if (!placed){ ok=false; break; }
@@ -68,9 +80,16 @@ function fbRandomFleet(){
 function fbFleetShot(fleet, cell){
   const b=fleet.find(b=>b.cells.includes(cell));
   if (!b) return {hit:false, sunk:null, dead:false};
+  const wasSunk=b.hits.size===b.len;
   b.hits.add(cell);
-  const sunk = b.hits.size===b.len ? {name:b.name, len:b.len, color:b.color, cells:b.cells.slice()} : null;
+  const sunk = !wasSunk && b.hits.size===b.len ? {name:b.name, len:b.len, color:b.color, cells:b.cells.slice()} : null;
   return {hit:true, sunk, dead: fleet.every(x=>x.hits.size===x.len)};
+}
+// Move boat idx to newCells, carrying its damaged sections with it.
+function fbMoveBoat(fleet, idx, newCells){
+  const b=fleet[idx];
+  const dmg=b.cells.map((c,i)=>b.hits.has(c)?i:-1).filter(i=>i>=0);
+  b.cells=newCells.slice(); b.hits=new Set(dmg.map(i=>b.cells[i]));
 }
 const fbPublic = fleet => fleet.map(b=>({name:b.name, len:b.len, color:b.color, cells:b.cells.slice()}));
 function fbCleanBoat(b){
@@ -80,16 +99,26 @@ function fbCleanBoat(b){
   return {name:String(b.name||'Boat').slice(0,12), len:cells.length, color:/^#[0-9a-f]{6}$/i.test(b.color)?b.color:'#556070', cells};
 }
 const fbCleanFleet = f => (Array.isArray(f)?f:[]).slice(0,5).map(fbCleanBoat).filter(Boolean);
+const fbCleanCells = a => (Array.isArray(a)?a:[]).slice(0,5).map(x=>x|0).filter(x=>x>=0 && x<100);
+// A square in target's waters that can still usefully be fired at.
+const fbFresh = (target, cell) => cell>=0 && cell<FB_N*FB_N && !(FB.shots[target]||{})[cell]
+                               && !(FB.sunk[target]||[]).some(b=>b.cells.includes(cell));
+function fbBombCells(cell, vert){
+  if (vert) return fbRow(cell)<FB_N-1 ? [cell, cell+FB_N] : [cell-FB_N, cell];
+  return cell%FB_N<FB_N-1 ? [cell, cell+1] : [cell-1, cell];
+}
 
 /* ---------------- starting games ---------------- */
 function fbReset(){
   FB.phase='idle'; FB.ref=null; FB.cpu=null; FB.solo=false; FB.tally={}; FB.bottomKey=''; FB.awaiting=false;
+  FB.moving=false; FB.draft=null; FB.aimMode='shot';
   fbOvHide();
 }
 function fbBegin(order){
   FB.phase='place'; FB.order=order.slice(); FB.alive=new Set(order); FB.turn=-1; FB.ready=new Set();
-  FB.fleet=fbRandomFleet(); FB.shots={}; FB.sunk={}; FB.reveal={}; FB.answered={};
+  FB.fleet=fbRandomFleet(); FB.shots={}; FB.sunk={}; FB.faded={}; FB.reveal={}; FB.answered={};
   FB.view=order.find(id=>id!==S.myId); FB.aim=-1; FB.sel=-1; FB.awaiting=false;
+  FB.pw={move:true, bomb:true}; FB.aimMode='shot'; FB.bombVert=false; FB.moving=false; FB.draft=null;
   FB.log=[]; FB.winner=-1; FB.last=null; FB.bottomKey='';
   S.mode='boats'; S.playing=false;
   fbOvHide(); showScreen('boats'); fbUpdate(); requestWake();
@@ -108,7 +137,7 @@ function fbStartSolo(){
   S.role=null; S.game='boats'; S.myId=0;
   S.players=[{id:0, name:S.myName}, {id:CPU, name:'Computer'}];
   FB.solo=true; FB.tally=keepTally; FB.g=(FB.g|0)+1;
-  FB.cpu={fleet:fbRandomFleet(), parity:Math.floor(Math.random()*2)};
+  FB.cpu={fleet:fbRandomFleet(), parity:Math.floor(Math.random()*2), pw:{move:true, bomb:true}, turns:0};
   const order=Math.random()<0.5 ? [0, CPU] : [CPU, 0];
   fbRefStart(order);
   fbBegin(order);
@@ -124,7 +153,8 @@ function fbRematch(btn){
 /* ---------------- referee (host phone, or solo) ---------------- */
 function fbSend(m){ if (!FB.solo) broadcast(m); }
 function fbRefStart(order){
-  FB.ref={order:order.slice(), alive:new Set(order), ready:new Set(), turn:-1, pending:null, between:false, over:false, shot:{}};
+  FB.ref={order:order.slice(), alive:new Set(order), ready:new Set(), turn:-1, pending:null, between:false, over:false,
+          shot:{}, sunkCells:{}, usedBomb:new Set()};
 }
 function fbRefReady(id){
   const R=FB.ref; if (!R || R.over || !R.alive.has(id)) return;
@@ -146,29 +176,46 @@ function fbRefNextTurn(first){
   fbSend({t:'fb-turn', g:FB.g, turn:next}); fbApplyTurn(next);
   if (FB.solo && next===CPU) fbCpuMove();
 }
-function fbRefShot(shooter, target, cell){
+const fbRefShot = (shooter, target, cell) => fbRefFire(shooter, target, [cell], false);
+const fbRefBomb = (shooter, target, cells) => fbRefFire(shooter, target, cells, true);
+function fbRefFire(shooter, target, cells, bomb){
   const R=FB.ref; if (!R || R.over) return;
-  const set=R.shot[target] || (R.shot[target]=new Set());
-  const valid = !R.pending && !R.between && R.turn===shooter && target!==shooter && R.alive.has(target)
-             && cell>=0 && cell<FB_N*FB_N && !set.has(cell);
-  if (!valid){
+  const done=R.shot[target] || (R.shot[target]=new Set()), sunkSet=R.sunkCells[target] || new Set();
+  const fresh=c=>c>=0 && c<FB_N*FB_N && !done.has(c) && !sunkSet.has(c);
+  let ok = !R.pending && !R.between && R.turn===shooter && target!==shooter && R.alive.has(target);
+  if (ok && bomb){
+    const [a,b]=cells;
+    ok = cells.length===2 && !R.usedBomb.has(shooter)
+      && ((Math.abs(a-b)===1 && fbRow(a)===fbRow(b)) || Math.abs(a-b)===FB_N) && cells.some(fresh);
+  } else if (ok) ok = cells.length===1 && fresh(cells[0]);
+  if (!ok){
     // tell a guest it's still their go, so their phone doesn't sit waiting
     if (!FB.solo && shooter!==S.myId && R.turn===shooter && !R.pending && !R.between) sendTo(shooter, {t:'fb-turn', g:FB.g, turn:R.turn});
     return;
   }
-  R.pending={shooter, target, cell, at:performance.now()};
-  if (target===S.myId) fbRefResult(fbAnswer(cell));
-  else if (FB.solo && target===CPU) fbRefResult(fbFleetShot(FB.cpu.fleet, cell));
-  else sendTo(target, {t:'fb-incoming', g:FB.g, shooter, cell});
+  if (bomb) R.usedBomb.add(shooter);
+  R.pending={shooter, target, cells:cells.filter(fresh).sort((x,y)=>x-y), i:0, bomb, hits:0, cell:-1, at:0};
+  fbRefAsk();
+}
+function fbRefAsk(){
+  const R=FB.ref, p=R.pending;
+  p.cell=p.cells[p.i]; p.at=performance.now();
+  if (p.target===S.myId) fbRefResult(fbAnswer(p.cell));
+  else if (FB.solo && p.target===CPU) fbRefResult(fbFleetShot(FB.cpu.fleet, p.cell));
+  else sendTo(p.target, {t:'fb-incoming', g:FB.g, shooter:p.shooter, cell:p.cell});
 }
 function fbRefResult(res){
   const R=FB.ref, p=R && R.pending; if (!p) return;
-  R.pending=null; R.between=true;
   (R.shot[p.target] || (R.shot[p.target]=new Set())).add(p.cell);
   const sunk=res.sunk ? fbCleanBoat(res.sunk) : null;
-  const r={g:FB.g, shooter:p.shooter, target:p.target, cell:p.cell, hit:!!res.hit, sunk, dead:!!res.dead};
-  if (r.dead) R.alive.delete(p.target);
+  if (sunk){ const ss=R.sunkCells[p.target] || (R.sunkCells[p.target]=new Set()); sunk.cells.forEach(c=>ss.add(c)); }
+  if (res.hit) p.hits++;
+  const dead=!!res.dead, more=!dead && p.i+1<p.cells.length;
+  const r={g:FB.g, shooter:p.shooter, target:p.target, cell:p.cell, hit:!!res.hit, sunk, dead, bomb:p.bomb, last:!more, hits:p.hits};
+  if (dead) R.alive.delete(p.target);
   fbSend({t:'fb-res', ...r}); fbApplyResult(r);
+  if (more){ p.i++; fbRefAsk(); return; }       // the bomb's second square
+  R.pending=null; R.between=true;
   later(()=>fbRefNextTurn(false), 900);
 }
 function fbRefOver(winner){
@@ -198,6 +245,7 @@ function fbAnswer(cell){
   if (FB.answered[cell]) return FB.answered[cell];
   const res=fbFleetShot(FB.fleet, cell);
   FB.answered[cell]=res;
+  if (FB.moving) fbSyncDraft();
   return res;
 }
 
@@ -208,8 +256,12 @@ function fbHostMsg(id, m){
   switch (m.t){
     case 'fb-ready':   if (m.g===FB.g) fbRefReady(id); break;
     case 'fb-shot':    if (m.g===FB.g) fbRefShot(id, m.target|0, m.cell|0); break;
+    case 'fb-bomb':    if (m.g===FB.g) fbRefBomb(id, m.target|0, fbCleanCells(m.cells).slice(0,2)); break;
     case 'fb-result':
       if (m.g===FB.g && R && R.pending && R.pending.target===id && R.pending.cell===(m.cell|0)) fbRefResult(m);
+      break;
+    case 'fb-moved':
+      if (m.g===FB.g && FB.alive.has(id)){ const cells=fbCleanCells(m.cells); broadcast({t:'fb-moved', g:FB.g, id, cells}, id); fbApplyMoved(id, cells); }
       break;
     case 'fb-reveal':
       if (m.g===FB.g){ const fleet=fbCleanFleet(m.fleet); FB.reveal[id]=fleet; broadcast({t:'fb-reveal', g:FB.g, id, fleet}, id); FB.dirty=true; }
@@ -234,8 +286,10 @@ function fbGuestMsg(m){
       toHost({t:'fb-result', g:FB.g, cell, hit:res.hit, sunk:res.sunk, dead:res.dead});
       break; }
     case 'fb-res':
-      fbApplyResult({shooter:m.shooter|0, target:m.target|0, cell:m.cell|0, hit:!!m.hit, sunk:fbCleanBoat(m.sunk), dead:!!m.dead});
+      fbApplyResult({shooter:m.shooter|0, target:m.target|0, cell:m.cell|0, hit:!!m.hit, sunk:fbCleanBoat(m.sunk), dead:!!m.dead,
+                     bomb:!!m.bomb, last:m.last!==false, hits:m.hits|0});
       break;
+    case 'fb-moved':  fbApplyMoved(m.id|0, fbCleanCells(m.cells)); break;
     case 'fb-gone':   fbApplyGone(m.id|0); break;
     case 'fb-over':   fbApplyOver(m.winner|0, normWins(m.tally)); break;
     case 'fb-reveal': FB.reveal[m.id|0]=fbCleanFleet(m.fleet); FB.dirty=true; break;
@@ -249,6 +303,7 @@ function fbApplyReadies(list){ FB.ready=new Set(list); fbUpdate(); }
 function fbApplyTurn(turn){
   if (FB.phase==='over') return;
   FB.phase='battle'; FB.turn=turn; FB.awaiting=false; FB.aim=-1;
+  if (turn!==S.myId || !FB.pw.bomb) FB.aimMode='shot';
   if (turn===S.myId && !FB.alive.has(FB.view)){ const v=fbRivals().find(id=>FB.alive.has(id)); if (v!=null) FB.view=v; }
   fbUpdate();
 }
@@ -261,24 +316,35 @@ function fbApplyResult(r){
   if (r.shooter===S.myId) FB.view=r.target;
   const cn=fbCellName(r.cell), them=r.target===S.myId ? 'you' : nameOf(r.target);
   const whose=r.target===S.myId ? 'your' : `${nameOf(r.target)}'s`;
-  const you = r.shooter===S.myId || r.target===S.myId;
-  if (r.sunk) fbLog(`${fbWho(r.shooter)} sank ${whose} ${r.sunk.name}! (${cn})`, 'sunk', you);
-  else fbLog(`${fbWho(r.shooter)} → ${them} ${cn}: ${r.hit?'hit!':'splash'}`, r.hit?'hit':'', you);
+  const you = r.shooter===S.myId || r.target===S.myId, b=r.bomb ? '💣 ' : '';
+  if (r.sunk) fbLog(`${b}${fbWho(r.shooter)} sank ${whose} ${r.sunk.name}! (${cn})`, 'sunk', you);
+  else fbLog(`${b}${fbWho(r.shooter)} → ${them} ${cn}: ${r.hit?'hit!':'splash'}`, r.hit?'hit':'', you);
   if (r.shooter===S.myId){
     if (r.sunk) fbToast(`You sank ${esc(whose)} <b>${esc(r.sunk.name)}</b>!`);
+    else if (r.bomb){ if (r.last) fbToast(r.hits ? `💣 <b>Boom!</b> ${r.hits} hit${r.hits>1?'s':''} on ${esc(nameOf(r.target))}` : '💣 Both squares splashed', !r.hits); }
     else if (r.hit) fbToast(`<b>Clonk!</b> A hit on ${esc(nameOf(r.target))}`);
     else fbToast('Splash — missed', true);
   } else if (r.target===S.myId){
-    const boat=(FB.fleet.find(b=>b.cells.includes(r.cell))||{}).name;
+    const boat=(FB.fleet.find(x=>x.cells.includes(r.cell))||{}).name;
     if (r.sunk) fbToast(`${esc(nameOf(r.shooter))} sank your <b>${esc(r.sunk.name)}</b>!`);
+    else if (r.bomb){ if (r.last) fbToast(r.hits ? `💣 ${esc(nameOf(r.shooter))} bombed you: ${r.hits} hit${r.hits>1?'s':''}` : `💣 ${esc(nameOf(r.shooter))}'s bomb missed you`, !r.hits); }
     else if (r.hit) fbToast(`${esc(nameOf(r.shooter))} hit your <b>${esc(boat||'boat')}</b>!`);
     else fbToast(`${esc(nameOf(r.shooter))} missed you (${cn})`, true);
+  } else if (r.bomb && r.last){
+    fbToast(`💣 ${esc(nameOf(r.shooter))} bombed ${esc(nameOf(r.target))}`, true);
   }
   if (r.dead){
     fbLog(`${r.target===S.myId?'Your':`${nameOf(r.target)}'s`} fleet is sunk!`, 'sunk', r.target===S.myId);
-    if (r.target===S.myId) fbToast('Your fleet is sunk!');
+    if (r.target===S.myId){ fbToast('Your fleet is sunk!'); FB.moving=false; FB.draft=null; }
     else if (r.shooter!==S.myId) fbToast(`${esc(nameOf(r.target))}'s fleet is sunk!`, true);
   }
+  fbUpdate();
+}
+function fbApplyMoved(id, cells){
+  const f=FB.faded[id] || (FB.faded[id]=new Set());
+  cells.forEach(c=>f.add(c));
+  fbLog(`⚓ ${fbWho(id)} moved a boat!`, 'sunk', id===S.myId);
+  fbToast(id===S.myId ? '⚓ Boat moved' : `⚓ <b>${esc(nameOf(id))}</b> moved a boat!`, id===S.myId);
   fbUpdate();
 }
 function fbApplyGone(id){
@@ -291,6 +357,7 @@ function fbApplyGone(id){
 function fbApplyOver(winner, tally){
   if (FB.phase==='over') return;
   FB.phase='over'; FB.winner=winner; FB.tally=tally||{}; FB.turn=-1; FB.aim=-1; FB.awaiting=false;
+  FB.moving=false; FB.draft=null; FB.aimMode='shot'; FB.sel=-1;
   const pub=fbPublic(FB.fleet);                  // show everyone where my boats were
   if (FB.solo) FB.reveal[CPU]=fbPublic(FB.cpu.fleet);
   else if (S.role==='host') broadcast({t:'fb-reveal', g:FB.g, id:S.myId, fleet:pub});
@@ -317,20 +384,49 @@ function fbTallyText(){
 /* ---------------- computer opponent ---------------- */
 function fbCpuMove(){
   later(()=>{
-    if (!FB.solo || FB.phase!=='battle' || !FB.ref || FB.ref.turn!==CPU) return;
-    fbRefShot(CPU, S.myId, fbAiPick());
+    if (!fbCpuTurn()) return;
+    if (fbCpuMaybeMove()) later(fbCpuFire, 900); else fbCpuFire();
   }, 750 + Math.random()*550);
+}
+const fbCpuTurn = () => FB.solo && FB.phase==='battle' && FB.ref && FB.ref.turn===CPU && !FB.ref.pending && !FB.ref.between;
+function fbCpuFire(){
+  if (!fbCpuTurn()) return;
+  FB.cpu.turns++;
+  const bomb=FB.cpu.pw.bomb ? fbAiBombPick() : null;
+  if (bomb){ FB.cpu.pw.bomb=false; fbRefBomb(CPU, S.myId, bomb); }
+  else fbRefShot(CPU, S.myId, fbAiPick());
+}
+// Once per game the computer moves a damaged boat that's close to sinking.
+function fbCpuMaybeMove(){
+  const c=FB.cpu; if (!c || !c.pw.move) return false;
+  const shots=FB.shots[CPU] || {};
+  const idx=c.fleet.findIndex(b=>b.hits.size>0 && b.hits.size<b.len && b.hits.size>=Math.min(2, b.len-1));
+  if (idx<0) return false;
+  const b=c.fleet[idx];
+  for (let k=0;k<500;k++){
+    const cells=fbBoatCells(Math.floor(Math.random()*FB_N*FB_N), b.len, Math.random()<0.5);
+    if (cells && fbFits(c.fleet, idx, cells) && cells.every(x=>!shots[x])){
+      const pub=b.cells.filter(x=>shots[x] && shots[x].hit);
+      fbMoveBoat(c.fleet, idx, cells); c.pw.move=false;
+      fbApplyMoved(CPU, pub);
+      return true;
+    }
+  }
+  return false;
+}
+function fbAiOpen(){
+  const me=S.myId, shots=FB.shots[me] || {}, faded=FB.faded[me] || new Set();
+  const sunkCells=new Set((FB.sunk[me]||[]).flatMap(b=>b.cells));
+  return Object.keys(shots).map(Number).filter(c=>shots[c].hit && !sunkCells.has(c) && !faded.has(c));
 }
 // Hunts on a checkerboard; after a hit, tries the squares around it, then follows the line.
 function fbAiPick(){
-  const me=S.myId, shots=FB.shots[me] || {};
-  const free=c=>c>=0 && c<FB_N*FB_N && !shots[c];
-  const sunkCells=new Set((FB.sunk[me]||[]).flatMap(b=>b.cells));
-  const open=Object.keys(shots).map(Number).filter(c=>shots[c].hit && !sunkCells.has(c));
+  const me=S.myId, free=c=>fbFresh(me, c);
+  const open=fbAiOpen();
   if (open.length){
     const os=new Set(open), line=[];
     for (const c of open){
-      const r=Math.floor(c/FB_N), k=c%FB_N;
+      const r=fbRow(c), k=c%FB_N;
       if ((k>0 && os.has(c-1)) || (k<FB_N-1 && os.has(c+1))){
         let a=c; while (a%FB_N>0 && os.has(a-1)) a--;
         let b=c; while (b%FB_N<FB_N-1 && os.has(b+1)) b++;
@@ -347,7 +443,7 @@ function fbAiPick(){
     if (line.length) return fbPick(line);
     const adj=[];
     for (const c of open){
-      const r=Math.floor(c/FB_N), k=c%FB_N;
+      const r=fbRow(c), k=c%FB_N;
       if (r>0 && free(c-FB_N)) adj.push(c-FB_N);
       if (r<FB_N-1 && free(c+FB_N)) adj.push(c+FB_N);
       if (k>0 && free(c-1)) adj.push(c-1);
@@ -363,34 +459,71 @@ function fbAiPick(){
   for (let c=0;c<FB_N*FB_N;c++){
     if (!free(c)) continue;
     any.push(c);
-    if ((Math.floor(c/FB_N)+c%FB_N)%minLen===par) hunt.push(c);
+    if ((fbRow(c)+c%FB_N)%minLen===par) hunt.push(c);
   }
   return fbPick(hunt.length ? hunt : any);
 }
+// When to use the big bomb: to push two squares further along a line of hits,
+// or two squares out from a single hit; failing that, late in a long hunt.
+function fbAiBombPick(){
+  const me=S.myId, free=c=>fbFresh(me, c);
+  const open=fbAiOpen(), os=new Set(open), pairs=[];
+  const pair=(a,b)=>{ if (free(a) && free(b)) pairs.push([Math.min(a,b), Math.max(a,b)]); };
+  for (const c of open){
+    const k=c%FB_N, r=fbRow(c);
+    if ((k>0 && os.has(c-1)) || (k<FB_N-1 && os.has(c+1))){
+      let a=c; while (a%FB_N>0 && os.has(a-1)) a--;
+      let b=c; while (b%FB_N<FB_N-1 && os.has(b+1)) b++;
+      if (a%FB_N>=2) pair(a-1, a-2);
+      if (b%FB_N<=FB_N-3) pair(b+1, b+2);
+    }
+    if ((r>0 && os.has(c-FB_N)) || (r<FB_N-1 && os.has(c+FB_N))){
+      let a=c; while (a>=FB_N && os.has(a-FB_N)) a-=FB_N;
+      let b=c; while (b<FB_N*(FB_N-1) && os.has(b+FB_N)) b+=FB_N;
+      if (fbRow(a)>=2) pair(a-FB_N, a-2*FB_N);
+      if (fbRow(b)<=FB_N-3) pair(b+FB_N, b+2*FB_N);
+    }
+  }
+  if (pairs.length) return fbPick(pairs);
+  for (const c of open){
+    const k=c%FB_N, r=fbRow(c);
+    if (k>=2) pair(c-1, c-2);
+    if (k<=FB_N-3) pair(c+1, c+2);
+    if (r>=2) pair(c-FB_N, c-2*FB_N);
+    if (r<=FB_N-3) pair(c+FB_N, c+2*FB_N);
+  }
+  if (pairs.length) return fbPick(pairs);
+  if (open.length || !FB.cpu || FB.cpu.turns<12) return null;
+  for (let c=0;c<FB_N*FB_N;c++){
+    if (c%FB_N<FB_N-1) pair(c, c+1);
+    if (fbRow(c)<FB_N-1) pair(c, c+FB_N);
+  }
+  return pairs.length ? fbPick(pairs) : null;
+}
 
 /* ---------------- placing boats ---------------- */
-// Put boat idx so that it covers the anchor square, as centred on it as possible.
-function fbTryPlace(idx, anchor, horiz){
-  const b=FB.fleet[idx], r=Math.floor(anchor/FB_N), c=anchor%FB_N, len=b.len;
+// Put boat idx of fleet so it covers the anchor square, as centred on it as possible.
+function fbTryPlace(fleet, idx, anchor, horiz, okCell){
+  const b=fleet[idx], r=fbRow(anchor), c=anchor%FB_N, len=b.cells.length;
   const pos=horiz ? c : r, ideal=pos-Math.floor(len/2);
   const starts=[];
   for (let s=pos-len+1; s<=pos; s++) if (s>=0 && s+len<=FB_N) starts.push(s);
   starts.sort((a,z)=>Math.abs(a-ideal)-Math.abs(z-ideal));
   for (const s of starts){
     const cells=fbBoatCells(horiz ? r*FB_N+s : s*FB_N+c, len, horiz);
-    if (cells && fbFits(FB.fleet, idx, cells)){ b.cells=cells; return true; }
+    if (cells && fbFits(fleet, idx, cells) && (!okCell || cells.every(okCell))){ b.cells=cells; return true; }
   }
   return false;
 }
 function fbPlaceTap(cell){
-  const idx=FB.fleet.findIndex(b=>b.cells.includes(cell));
+  const fl=FB.fleet, idx=fl.findIndex(b=>b.cells.includes(cell));
   if (FB.sel<0){
     if (idx>=0) FB.sel=idx; else fbToast('Tap one of your boats first', true);
   } else if (idx===FB.sel){
-    if (!fbTryPlace(idx, cell, !fbIsH(FB.fleet[idx].cells))) fbToast('No room to turn it there', true);
+    if (!fbTryPlace(fl, idx, cell, !fbIsH(fl[idx].cells))) fbToast('No room to turn it there', true);
   } else if (idx>=0){
     FB.sel=idx;
-  } else if (!fbTryPlace(FB.sel, cell, fbIsH(FB.fleet[FB.sel].cells))){
+  } else if (!fbTryPlace(fl, FB.sel, cell, fbIsH(fl[FB.sel].cells))){
     fbToast("It won't fit there", true);
   }
   fbUpdate();
@@ -403,20 +536,90 @@ function fbReady(){
   fbUpdate();
 }
 
+/* ---------------- move-a-boat power-up ---------------- */
+const fbCanMove = () => FB.phase==='battle' && FB.pw.move && FB.alive.has(S.myId);
+function fbStartMove(){
+  if (!fbCanMove()) return;
+  FB.aimMode='shot'; FB.aim=-1;
+  FB.moving=true; FB.sel=-1;
+  FB.draft=FB.fleet.map(b=>({...b, cells:b.cells.slice()}));
+  fbUpdate();
+}
+function fbCancelMove(){ FB.moving=false; FB.draft=null; FB.sel=-1; fbUpdate(); }
+function fbSyncDraft(){                  // a shot landed while choosing: keep the draft sensible
+  if (!FB.draft) return;
+  const shots=FB.shots[S.myId] || {};
+  FB.draft.forEach((d,i)=>{ if (d.cells.some(c=>shots[c] && !FB.fleet[i].cells.includes(c))) d.cells=FB.fleet[i].cells.slice(); });
+}
+function fbMoveTap(cell){
+  const fl=FB.draft, shots=FB.shots[S.myId] || {};
+  const open=c=>!shots[c];
+  const idx=fl.findIndex(b=>b.cells.includes(cell));
+  const afloat=i=>FB.fleet[i].hits.size<FB.fleet[i].len;
+  if (FB.sel<0){
+    if (idx>=0 && afloat(idx)) FB.sel=idx;
+    else fbToast(idx>=0 ? 'That boat has sunk' : 'Tap the boat you want to move', true);
+  } else if (idx===FB.sel){
+    if (!fbTryPlace(fl, idx, cell, !fbIsH(fl[idx].cells), open)) fbToast('No open water to turn it there', true);
+  } else if (idx>=0){
+    if (!afloat(idx)){ fbToast('That boat has sunk', true); }
+    else { fl[FB.sel].cells=FB.fleet[FB.sel].cells.slice(); FB.sel=idx; }      // only one boat moves
+  } else if (shots[cell]){
+    fbToast('Boats can only move into water nobody has fired at', true);
+  } else if (!fbTryPlace(fl, FB.sel, cell, fbIsH(fl[FB.sel].cells), open)){
+    fbToast("It won't fit there", true);
+  }
+  fbUpdate();
+}
+const fbDraftChanged = () => FB.sel>=0 && FB.draft && FB.draft[FB.sel].cells.join()!==FB.fleet[FB.sel].cells.join();
+function fbCommitMove(){
+  if (!FB.moving || !fbDraftChanged() || !fbCanMove()) return;
+  const i=FB.sel, nc=FB.draft[i].cells, shots=FB.shots[S.myId] || {};
+  if (!nc.every(c=>!shots[c]) || !fbFits(FB.fleet, i, nc)){ fbToast("Can't move there now", true); return; }
+  const pub=FB.fleet[i].cells.filter(c=>shots[c] && shots[c].hit);    // old hit squares everyone saw
+  fbMoveBoat(FB.fleet, i, nc);
+  FB.pw.move=false; FB.moving=false; FB.draft=null; FB.sel=-1;
+  if (FB.solo || S.role==='host') fbSend({t:'fb-moved', g:FB.g, id:S.myId, cells:pub});
+  else toHost({t:'fb-moved', g:FB.g, cells:pub});
+  fbApplyMoved(S.myId, pub);
+}
+
 /* ---------------- firing ---------------- */
-function fbCanAim(cell){
-  return FB.phase==='battle' && FB.turn===S.myId && FB.alive.has(S.myId) && !FB.awaiting
-      && FB.view!==S.myId && FB.alive.has(FB.view) && !((FB.shots[FB.view]||{})[cell]);
+const fbMyGo = () => FB.phase==='battle' && FB.turn===S.myId && FB.alive.has(S.myId) && !FB.awaiting && !FB.moving
+                  && FB.view!==S.myId && FB.alive.has(FB.view);
+const fbCanAim = cell => fbMyGo() && fbFresh(FB.view, cell);
+const fbBombOk = cell => fbMyGo() && FB.pw.bomb && fbBombCells(cell, FB.bombVert).some(c=>fbFresh(FB.view, c));
+function fbToggleBomb(){
+  if (FB.aimMode==='bomb'){ FB.aimMode='shot'; FB.aim=-1; }
+  else if (fbMyGo() && FB.pw.bomb){ FB.aimMode='bomb'; FB.aim=-1; }
+  fbUpdate();
 }
 function fbFire(){
   const cell=FB.aim, target=FB.view;
-  if (cell<0 || !fbCanAim(cell)) return;
+  if (cell<0) return;
+  if (FB.aimMode==='bomb'){
+    if (!fbBombOk(cell)) return;
+    const cells=fbBombCells(cell, FB.bombVert);
+    FB.pw.bomb=false; FB.aimMode='shot'; FB.aim=-1; FB.awaiting=true; fbUpdate();
+    if (FB.solo || S.role==='host') fbRefBomb(S.myId, target, cells);
+    else toHost({t:'fb-bomb', g:FB.g, target, cells});
+    return;
+  }
+  if (!fbCanAim(cell)) return;
   FB.aim=-1; FB.awaiting=true; fbUpdate();
   if (FB.solo || S.role==='host') fbRefShot(S.myId, target, cell);
   else toHost({t:'fb-shot', g:FB.g, target, cell});
 }
 function fbTap(cell){
   if (FB.phase==='place'){ fbPlaceTap(cell); return; }
+  if (FB.moving){ fbMoveTap(cell); return; }
+  if (FB.aimMode==='bomb'){
+    if (FB.aim===cell){                              // tap again: turn the bomb across/down
+      FB.bombVert=!FB.bombVert;
+      if (!fbBombOk(cell)) FB.bombVert=!FB.bombVert;
+    } else if (fbBombOk(cell)) FB.aim=cell;
+    fbUpdate(); return;
+  }
   if (!fbCanAim(cell)) return;
   if (FB.aim===cell){ fbFire(); return; }      // tap the same square again to fire
   FB.aim=cell; fbUpdate();
@@ -425,6 +628,7 @@ function fbTap(cell){
 /* ---------------- screen ---------------- */
 function fbStatusHTML(){
   const rivals=fbRivals(), many=rivals.filter(id=>FB.alive.has(id)).length>1;
+  if (FB.moving) return '<b>Move a boat:</b> tap it, then tap open water (no splashes or hits). Tap it again to turn it, then press <b>Move it!</b>';
   switch (FB.phase){
     case 'place': return 'Hide your boats: tap one, then tap the water to move it. Tap it again to turn it.';
     case 'wait': {
@@ -435,6 +639,7 @@ function fbStatusHTML(){
       if (!FB.alive.has(S.myId)) return `Your fleet is sunk — watching. <b>${esc(nameOf(FB.turn))}</b>'s turn.`;
       if (FB.turn===S.myId){
         if (FB.awaiting) return 'Firing…';
+        if (FB.aimMode==='bomb') return `<b>Big bomb:</b> tap a square in <b>${esc(nameOf(FB.view))}</b>'s waters — tap it again to turn the bomb across/down — then press <b>Drop bomb</b>.`;
         return `<b>Your turn</b> — pick a square in <b>${esc(nameOf(FB.view))}</b>'s waters${many?' (tap a name to switch)':''}, then tap it again or press Fire.`;
       }
       return FB.turn===CPU ? 'The computer is taking aim…' : `<b>${esc(nameOf(FB.turn))}</b> is taking aim…`;
@@ -442,16 +647,18 @@ function fbStatusHTML(){
   }
   return '';
 }
+const FB_ICON_MOVE = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 20h20q5 0 7-4-3-2-7-2H6q-3 0-3 3z" fill="#1f6b4a"/><rect x="7" y="11" width="12" height="4" rx="1" fill="#7a2232"/><path d="M4 26q4-2 8 0t8 0 8 0" fill="none" stroke="#48b6ff" stroke-width="2" stroke-linecap="round"/><path d="M22 5h7m0 0-3-3m3 3-3 3" fill="none" stroke="#ffb03b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const FB_ICON_BOMB = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="19" r="10" fill="#2a2d3d" stroke="#596079" stroke-width="1.5"/><circle cx="10.5" cy="15.5" r="2.5" fill="#596079"/><path d="M20 11l3-3" stroke="#8b90b2" stroke-width="3" stroke-linecap="round"/><path d="M23 8q2-4 5-3" fill="none" stroke="#c98a12" stroke-width="1.8" stroke-linecap="round"/><g fill="#ffd23f"><circle cx="28" cy="5" r="2"/><circle cx="30.5" cy="2.5" r="1"/><circle cx="25.5" cy="2" r="1"/></g></svg>';
 function fbUpdate(){
   FB.dirty=true;
   if (!onBoatsScreen()) return;
   const st=$('#fbStatus');
   st.innerHTML=fbStatusHTML();
-  st.classList.toggle('myturn', FB.phase==='battle' && FB.turn===S.myId && FB.alive.has(S.myId));
+  st.classList.toggle('myturn', FB.moving || (FB.phase==='battle' && FB.turn===S.myId && FB.alive.has(S.myId)));
   $('#fbScore').innerHTML=fbTallyText();
 
   // rival tabs
-  const showTabs=FB.phase==='battle' || FB.phase==='over';
+  const showTabs=(FB.phase==='battle' || FB.phase==='over') && !FB.moving;
   $('#fbTabs').innerHTML = showTabs ? fbRivals().map(id=>{
     const left=FB_FLEET.length-(FB.sunk[id]||[]).length, out=!FB.alive.has(id);
     const sub = out ? (left===0 ? 'fleet sunk' : 'out') : `${left} boat${left===1?'':'s'} afloat`;
@@ -467,7 +674,12 @@ function fbUpdate(){
     bottom.innerHTML = key==='place'
       ? `<div class="fb-fleet" id="fbChips"></div><div class="fb-btns"><button class="btn" id="fbShuffle">Shuffle</button><button class="btn primary" id="fbReadyBtn">Ready!</button></div>`
       : key==='wait' ? `<div class="fb-wait" id="fbWait"></div>`
-      : `<div class="fb-mine-wrap"><div class="lbl" id="fbMineLbl">YOUR FLEET</div><canvas id="fbMine"></canvas></div><div class="fb-side"><div class="fb-log" id="fbLog"></div><button class="btn primary" id="fbAct"></button></div>`;
+      : `<div class="fb-mine-wrap"><div class="lbl" id="fbMineLbl">YOUR FLEET</div><canvas id="fbMine"></canvas></div>
+         <div class="fb-side">
+           <div class="fb-pws"><button class="fb-pw" id="fbPwMove">${FB_ICON_MOVE}<span></span></button><button class="fb-pw" id="fbPwBomb">${FB_ICON_BOMB}<span></span></button></div>
+           <div class="fb-log" id="fbLog"></div>
+           <button class="btn primary" id="fbAct"></button>
+         </div>`;
     requestAnimationFrame(()=>fbLayout());
   }
   if (key==='place'){
@@ -477,13 +689,26 @@ function fbUpdate(){
   } else {
     const afloat=FB.fleet.filter(b=>b.hits.size<b.len).length;
     $('#fbMineLbl').textContent=`YOUR FLEET · ${afloat} AFLOAT`;
-    $('#fbLog').innerHTML=FB.log.slice(-5).map(l=>`<div class="${l.cls}${l.you?' you':''}">${esc(l.txt)}</div>`).join('');
+    $('#fbLog').innerHTML=FB.log.slice(-4).map(l=>`<div class="${l.cls}${l.you?' you':''}">${esc(l.txt)}</div>`).join('');
+    // power-up buttons
+    const mv=$('#fbPwMove'), bm=$('#fbPwBomb'), live=FB.phase==='battle' && FB.alive.has(S.myId);
+    mv.classList.toggle('used', !FB.pw.move); mv.classList.toggle('on', FB.moving);
+    mv.querySelector('span').textContent = FB.moving ? 'Cancel' : FB.pw.move ? 'Move boat' : 'Used';
+    mv.disabled = !(FB.moving || (live && FB.pw.move));
+    bm.classList.toggle('used', !FB.pw.bomb); bm.classList.toggle('on', FB.aimMode==='bomb');
+    bm.querySelector('span').textContent = FB.aimMode==='bomb' ? 'Cancel' : FB.pw.bomb ? 'Big bomb' : 'Used';
+    bm.disabled = !(FB.aimMode==='bomb' || (fbMyGo() && FB.pw.bomb));
+    // main action button
     const act=$('#fbAct');
     if (FB.phase==='over'){ act.textContent=FB.solo?'Play again':'Rematch'; act.disabled=false; act.dataset.act='rematch'; }
+    else if (FB.moving){ act.textContent='Move it!'; act.dataset.act='move'; act.disabled=!fbDraftChanged(); }
     else if (!FB.alive.has(S.myId)){ act.textContent='Watching'; act.disabled=true; act.dataset.act=''; }
     else if (FB.turn===S.myId){
       act.dataset.act='fire';
-      act.textContent = FB.awaiting ? 'Firing…' : FB.aim>=0 ? `Fire at ${fbCellName(FB.aim)}!` : 'Pick a square';
+      if (FB.aimMode==='bomb'){
+        const cells=FB.aim>=0 ? fbBombCells(FB.aim, FB.bombVert) : null;
+        act.textContent = cells ? `Drop bomb: ${fbCellName(cells[0])}+${fbCellName(cells[1])}` : 'Pick a square';
+      } else act.textContent = FB.awaiting ? 'Firing…' : FB.aim>=0 ? `Fire at ${fbCellName(FB.aim)}!` : 'Pick a square';
       act.disabled = FB.awaiting || FB.aim<0;
     } else { act.textContent=FB.turn===CPU?"Computer's turn":`${nameOf(FB.turn)}'s turn`; act.disabled=true; act.dataset.act=''; }
   }
@@ -518,7 +743,7 @@ function fbHullPath(x, l, r, top, bot){
 }
 function fbDrawBoat(x, b, ox, oy, cell, style){
   const h=fbIsH(b.cells), len=b.cells.length;
-  const r0=Math.floor(b.cells[0]/FB_N), c0=b.cells[0]%FB_N;
+  const r0=fbRow(b.cells[0]), c0=b.cells[0]%FB_N;
   const W=h ? len*cell : cell, H=h ? cell : len*cell;
   x.save();
   x.translate(ox+c0*cell+W/2, oy+r0*cell+H/2);
@@ -563,6 +788,11 @@ function fbDrawHit(x, cx, cy, cell){
   x.closePath(); x.fillStyle='#ff5a3d'; x.fill();
   x.fillStyle='#ffd23f'; x.beginPath(); x.arc(cx, cy, cell*0.13, 0, Math.PI*2); x.fill();
 }
+function fbDrawFaded(x, cx, cy, cell){              // a hit whose boat has since moved away
+  x.strokeStyle='rgba(255,140,110,.45)'; x.lineWidth=Math.max(1, cell*0.05); x.setLineDash([cell*0.08, cell*0.07]);
+  x.beginPath(); x.arc(cx, cy, cell*0.3, 0, Math.PI*2); x.stroke(); x.setLineDash([]);
+  x.fillStyle='rgba(255,140,110,.35)'; x.beginPath(); x.arc(cx, cy, cell*0.09, 0, Math.PI*2); x.fill();
+}
 function fbDrawWater(x, ox, oy, cell, labels){
   const S2=cell*FB_N;
   const g=x.createLinearGradient(0, oy, 0, oy+S2); g.addColorStop(0,'#123f47'); g.addColorStop(1,'#0d3037');
@@ -581,64 +811,86 @@ function fbDrawWater(x, ox, oy, cell, labels){
     }
   }
 }
+const fbCenter = (ox, oy, cell, c) => [ox+(c%FB_N+0.5)*cell, oy+(fbRow(c)+0.5)*cell];
 function fbPulse(x, ox, oy, cell, target){
   const L=FB.last; if (!L || L.target!==target) return false;
   const t=(performance.now()-L.at)/800; if (t>=1) return false;
-  const c=L.cell, cx=ox+(c%FB_N+0.5)*cell, cy=oy+(Math.floor(c/FB_N)+0.5)*cell;
+  const [cx,cy]=fbCenter(ox, oy, cell, L.cell);
   x.strokeStyle = L.hit ? `rgba(255,120,80,${1-t})` : `rgba(215,240,255,${1-t})`;
   x.lineWidth=Math.max(1.5, cell*0.08);
   x.beginPath(); x.arc(cx, cy, cell*(0.3+0.9*t), 0, Math.PI*2); x.stroke();
   return true;
+}
+// My own waters: my boats (or the move draft), their damage, and every shot fired at me.
+function fbDrawMine(x, ox, oy, cell, labels){
+  fbDrawWater(x, ox, oy, cell, labels);
+  const boats=FB.moving && FB.draft ? FB.draft : FB.fleet;
+  const damage=new Set();
+  boats.forEach((b,i)=>{
+    const real=FB.fleet[i];
+    real.cells.forEach((c,k)=>{ if (real.hits.has(c)) damage.add(b.cells[k]); });
+    fbDrawBoat(x, b, ox, oy, cell, real.hits.size===real.len ? 'sunk' : (FB.moving && i===FB.sel ? 'sel' : 'mine'));
+  });
+  const inc=FB.shots[S.myId] || {};
+  for (const k in inc){
+    const c=+k, [cx,cy]=fbCenter(ox, oy, cell, c);
+    if (!inc[k].hit) fbDrawMiss(x, cx, cy, cell);
+    else if (!damage.has(c)) fbDrawFaded(x, cx, cy, cell);
+  }
+  damage.forEach(c=>{ const [cx,cy]=fbCenter(ox, oy, cell, c); fbDrawHit(x, cx, cy, cell); });
+  return fbPulse(x, ox, oy, cell, S.myId);
 }
 function fbRender(){
   const cv=$('#fbCv'); if (!cv || !cv.width) return false;
   const x=cv.getContext('2d'); x.setTransform(DPR,0,0,DPR,0,0);
   x.clearRect(0, 0, cv.width, cv.height);
   const ox=FBL.lab, oy=FBL.lab, cell=FBL.cell;
-  fbDrawWater(x, ox, oy, cell, true);
   let anim=false;
-  if (FB.phase==='place' || FB.phase==='wait' || FB.phase==='idle'){
+  if (FB.moving){
+    anim=fbDrawMine(x, ox, oy, cell, true);
+  } else if (FB.phase==='place' || FB.phase==='wait' || FB.phase==='idle'){
+    fbDrawWater(x, ox, oy, cell, true);
     FB.fleet.forEach((b,i)=>fbDrawBoat(x, b, ox, oy, cell, i===FB.sel ? 'sel' : 'mine'));
   } else {
-    const t=FB.view, shots=FB.shots[t] || {}, sunk=FB.sunk[t] || [];
+    fbDrawWater(x, ox, oy, cell, true);
+    const t=FB.view, shots=FB.shots[t] || {}, sunk=FB.sunk[t] || [], faded=FB.faded[t] || new Set();
     if (FB.phase==='over' && FB.reveal[t]) FB.reveal[t].forEach(b=>{ if (!sunk.some(s=>s.name===b.name)) fbDrawBoat(x, b, ox, oy, cell, 'ghost'); });
     sunk.forEach(b=>fbDrawBoat(x, b, ox, oy, cell, 'sunk'));
     for (const k in shots){
-      const c=+k, cx=ox+(c%FB_N+0.5)*cell, cy=oy+(Math.floor(c/FB_N)+0.5)*cell;
-      if (shots[k].hit) fbDrawHit(x, cx, cy, cell); else fbDrawMiss(x, cx, cy, cell);
+      const c=+k, [cx,cy]=fbCenter(ox, oy, cell, c);
+      if (!shots[k].hit) fbDrawMiss(x, cx, cy, cell);
+      else if (faded.has(c)) fbDrawFaded(x, cx, cy, cell);
+      else fbDrawHit(x, cx, cy, cell);
     }
-    if (FB.aim>=0 && fbCanAim(FB.aim)){
-      const c=FB.aim, px=ox+(c%FB_N)*cell, py=oy+Math.floor(c/FB_N)*cell;
+    if (FB.aim>=0){
+      const squares = FB.aimMode==='bomb' ? fbBombCells(FB.aim, FB.bombVert) : (fbCanAim(FB.aim) ? [FB.aim] : []);
       x.strokeStyle='#ffb03b'; x.lineWidth=Math.max(2, cell*0.08);
-      rr(x, px+2, py+2, cell-4, cell-4, cell*0.18); x.stroke();
-      x.beginPath(); x.moveTo(px+cell/2, py+cell*0.2); x.lineTo(px+cell/2, py+cell*0.8);
-      x.moveTo(px+cell*0.2, py+cell/2); x.lineTo(px+cell*0.8, py+cell/2); x.stroke();
+      for (const c of squares){
+        const px=ox+(c%FB_N)*cell, py=oy+fbRow(c)*cell;
+        rr(x, px+2, py+2, cell-4, cell-4, cell*0.18); x.stroke();
+        if (FB.aimMode==='bomb'){ x.fillStyle='rgba(255,176,59,.28)'; rr(x, px+2, py+2, cell-4, cell-4, cell*0.18); x.fill(); }
+        else {
+          x.beginPath(); x.moveTo(px+cell/2, py+cell*0.2); x.lineTo(px+cell/2, py+cell*0.8);
+          x.moveTo(px+cell*0.2, py+cell/2); x.lineTo(px+cell*0.8, py+cell/2); x.stroke();
+        }
+      }
     }
     anim = fbPulse(x, ox, oy, cell, t) || anim;
     if (!FB.alive.has(t) && FB.phase==='battle'){
       x.fillStyle='rgba(10,11,18,.35)'; x.fillRect(ox, oy, cell*FB_N, cell*FB_N);
     }
   }
-  // my own fleet, small, with shots fired at me
   const mv=$('#fbMine');
   if (mv && mv.width){
     const m=mv.getContext('2d'); m.setTransform(DPR,0,0,DPR,0,0); m.clearRect(0,0,mv.width,mv.height);
-    const mc=FBL.mini;
-    fbDrawWater(m, 0, 0, mc, false);
-    FB.fleet.forEach(b=>fbDrawBoat(m, b, 0, 0, mc, b.hits.size===b.len ? 'sunk' : 'mine'));
-    const inc=FB.shots[S.myId] || {};
-    for (const k in inc){
-      const c=+k, cx=(c%FB_N+0.5)*mc, cy=(Math.floor(c/FB_N)+0.5)*mc;
-      if (inc[k].hit) fbDrawHit(m, cx, cy, mc); else fbDrawMiss(m, cx, cy, mc);
-    }
-    anim = fbPulse(m, 0, 0, mc, S.myId) || anim;
+    anim = fbDrawMine(m, 0, 0, FBL.mini, false) || anim;
   }
   return anim;
 }
 function fbFrame(){
   // host: if a shot's answer hasn't arrived, ask again (answers are repeatable)
   const R=FB.ref;
-  if (R && R.pending && !FB.solo && R.pending.target!==S.myId && performance.now()-R.pending.at>4000){
+  if (R && R.pending && !FB.solo && R.pending.target!==S.myId && R.pending.at && performance.now()-R.pending.at>4000){
     R.pending.at=performance.now();
     sendTo(R.pending.target, {t:'fb-incoming', g:FB.g, shooter:R.pending.shooter, cell:R.pending.cell});
   }
@@ -670,7 +922,13 @@ $('#fbBottom').addEventListener('click', e=>{
   if (t.id==='fbShuffle'){ FB.fleet=fbRandomFleet(); FB.sel=-1; fbUpdate(); }
   else if (t.id==='fbReadyBtn') fbReady();
   else if (t.classList.contains('fb-chip')){ FB.sel=+t.dataset.i; fbUpdate(); }
-  else if (t.id==='fbAct'){ if (t.dataset.act==='fire') fbFire(); else if (t.dataset.act==='rematch') fbRematch(t); }
+  else if (t.id==='fbPwMove'){ if (FB.moving) fbCancelMove(); else fbStartMove(); }
+  else if (t.id==='fbPwBomb') fbToggleBomb();
+  else if (t.id==='fbAct'){
+    if (t.dataset.act==='fire') fbFire();
+    else if (t.dataset.act==='move') fbCommitMove();
+    else if (t.dataset.act==='rematch') fbRematch(t);
+  }
 });
 $('#fbQuit').addEventListener('click', ()=>{
   if (!FB.solo && !S.lost && FB.phase!=='over' && !confirm('Leave the game?')) return;
@@ -690,4 +948,5 @@ $('#fbCv').addEventListener('pointerup', e=>{
 $('#fbCv').addEventListener('pointercancel', ()=>{ fbDown=null; });
 
 // test hook (harmless in normal play)
-window.__fb = {FB, FBL, CPU, fbTap, fbFire, fbReady, fbAiPick, fbRandomFleet, fbCellName, fbStartSolo};
+window.__fb = {FB, FBL, CPU, fbTap, fbFire, fbReady, fbAiPick, fbAiBombPick, fbRandomFleet, fbCellName, fbStartSolo,
+               fbBombCells, fbStartMove, fbCommitMove, fbToggleBomb, fbMoveBoat, fbCpuMaybeMove};

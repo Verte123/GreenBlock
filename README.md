@@ -26,6 +26,12 @@ Each player hides five canal boats on their own 10×10 canal — Narrowboat (5),
 
 Players take turns firing one shot. Tap a square to aim, then tap it again (or press Fire). With three players, the name tabs choose whose waters you fire into. Every shot and result is shown to everyone; sunk boats are revealed. A player whose whole fleet is sunk is out and watches; the last fleet afloat wins. After the game everyone's boats are revealed, and **Rematch** keeps a running score. **Vs computer** plays against a computer that hunts on a checkerboard and follows up its hits.
 
+**Power-ups** (each once per game):
+- **Move boat** — at any point in the battle, without using your turn, move one of your boats (even a damaged one) into water nobody has fired at. A damaged boat keeps its damage: the hit sections move with it, so it still only needs its remaining sections hit. Rivals are told "… moved a boat!" and the old hit marks fade. Sunk boats can't be moved.
+- **Big bomb** — instead of a normal shot, hit two squares side by side in one rival's waters. Tap a square to aim, tap it again to turn the bomb across or down, then **Drop bomb**.
+
+The computer uses both: it bombs to follow up a line of hits (or late in a long search) and moves a damaged boat when it's close to sinking.
+
 Each phone keeps its own fleet secret and answers the shots fired at it; the host's phone keeps track of turns, who is out and who has won. The code is in `fightyboats.js`.
 
 ## How it works
