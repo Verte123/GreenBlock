@@ -36,7 +36,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
 /* ---------- menu ---------- */
 #menu{justify-content:center;gap:14px;overflow-y:auto}
 .logo{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:6px}
-#logoCv{width:150px;height:60px}
+#logoCv{width:110px;height:44px}
 .title{font-size:42px;font-weight:900;letter-spacing:.06em;line-height:1}
 .title span{color:var(--mint)}
 .tag{color:var(--muted);font-size:14px}
@@ -60,6 +60,56 @@ details.how summary::-webkit-details-marker{display:none}
 details.how p{margin:8px 0}
 details.how b{color:var(--ink)}
 .ver{font-size:11px;color:var(--muted);opacity:.75}
+#menu .title{font-size:34px;margin-bottom:2px}
+.name-card,.join-card{padding:12px 14px;gap:8px}
+.games{width:100%;max-width:340px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gcard{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;min-width:0}
+.gcard .gicon{width:110px;height:44px}
+.gname{font-weight:900;font-size:16px;letter-spacing:.04em;white-space:nowrap}
+.gname span{color:var(--mint)} .gname span.sky{color:var(--sky)}
+.gtag{font-size:11.5px;color:var(--muted);line-height:1.3;min-height:2.6em}
+.gcard .btn{padding:11px 6px;font-size:15px}
+.howh{color:var(--ink)!important;font-weight:800;margin-bottom:0!important}
+
+/* ---------- FightyBoats ---------- */
+#boats{padding-left:12px;padding-right:12px;gap:8px}
+.fb-top{width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fb-title{font-weight:900;font-size:19px;letter-spacing:.06em;white-space:nowrap}
+.fb-title span{color:var(--sky)}
+.fb-score{flex:1;text-align:center;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fb-status{width:100%;max-width:480px;font-size:14px;color:var(--muted);min-height:2.6em;text-align:center;line-height:1.3}
+.fb-status b{color:var(--ink)}
+.fb-status.myturn{color:var(--amber)} .fb-status.myturn b{color:var(--amber)}
+.fb-tabs{width:100%;max-width:480px;display:flex;gap:6px}
+.fb-tabs:empty{display:none}
+.fb-tab{flex:1;min-width:0;padding:7px 6px;border-radius:12px;background:var(--panel);border:1.5px solid var(--line);font-size:14px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:1px}
+.fb-tab .tn{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fb-tab small{font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.03em}
+.fb-tab.on{border-color:var(--sky);background:var(--panel2)}
+.fb-tab.turn .tn::before{content:'▶ ';color:var(--amber)}
+.fb-tab.out{opacity:.45}
+.fb-main{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;position:relative}
+#fbCv{display:block}
+#fbOverlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(14,15,22,.82);border-radius:12px;text-align:center;padding:16px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);z-index:4}
+#fbOverlay.show{display:flex}
+#fbOverlay .btn{max-width:240px}
+.fb-toast{position:absolute;left:0;right:0;top:14%;display:flex;justify-content:center;pointer-events:none;z-index:3}
+.fb-bottom{width:100%;max-width:480px;display:flex;gap:10px;align-items:stretch;min-height:120px}
+.fb-bottom.place{flex-direction:column;align-items:center;gap:10px}
+.fb-mine-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+.fb-mine-wrap .lbl{font-size:9px}
+#fbMine{display:block;border-radius:6px}
+.fb-side{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+.fb-log{flex:1;font-size:12px;color:var(--muted);line-height:1.4;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
+.fb-log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fb-log .hit{color:var(--coral)} .fb-log .sunk{color:var(--amber);font-weight:800} .fb-log .you{color:var(--ink)}
+.fb-fleet{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.fb-chip{font-size:11.5px;font-weight:800;padding:5px 9px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+.fb-chip.sel{border-color:var(--amber);color:var(--amber)}
+.fb-btns{display:flex;gap:8px;width:100%}
+.fb-btns .btn{flex:1}
+.fb-wait{font-size:13px;color:var(--muted);text-align:center;line-height:1.5}
+.fb-wait b{color:var(--mint)}
 
 /* ---------- lobby ---------- */
 #lobby{justify-content:center;gap:14px;text-align:center;overflow-y:auto}
@@ -122,11 +172,11 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
 .ov-big.win{color:var(--mint)} .ov-big.lose{color:var(--coral)}
 .ov-sub{font-size:15px;color:var(--muted);line-height:1.45}
 #toast{position:absolute;left:11px;right:0;top:24%;display:flex;justify-content:center;pointer-events:none;z-index:3}
-#toastPill{background:rgba(18,19,28,.8);border:1px solid var(--amber);color:var(--amber);font-weight:800;font-size:15px;padding:7px 14px;border-radius:999px;
+#toastPill,#fbToastPill{background:rgba(18,19,28,.8);border:1px solid var(--amber);color:var(--amber);font-weight:800;font-size:15px;padding:7px 14px;border-radius:999px;
   white-space:normal;text-align:center;line-height:1.25;max-width:92%;overflow-wrap:anywhere;opacity:0;transform:translateY(-6px);transition:opacity .15s,transform .15s}
-#toastPill.show{opacity:1;transform:none}
-#toastPill b{color:var(--ink)}
-#toastPill.info{border-color:var(--line);color:var(--muted)}
+#toastPill.show,#fbToastPill.show{opacity:1;transform:none}
+#toastPill b,#fbToastPill b{color:var(--ink)}
+#toastPill.info,#fbToastPill.info{border-color:var(--line);color:var(--muted)}
 .hint{font-size:11px;color:var(--muted);text-align:center}
 /* power-up buttons */
 .pw{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:6px 2px 5px;border-radius:12px;background:var(--panel2);border:1.5px solid var(--amber)}
@@ -147,30 +197,56 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
 
 <!-- ============ MENU ============ -->
 <section id="menu" class="screen active">
-  <div class="logo">
-    <canvas id="logoCv" width="300" height="120"></canvas>
-    <div class="title"><span>GREEN</span>BLOCK</div>
-    <div class="tag">Clear lines. Bury your rivals.</div>
-  </div>
-  <div class="card">
+  <div class="title"><span>GREEN</span>GAMES</div>
+  <div class="card name-card">
     <div class="lab">Your name</div>
     <input id="nameIn" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Player">
-    <button class="btn primary" id="hostBtn">Host a game</button>
+  </div>
+  <div class="games">
+    <div class="gcard">
+      <canvas id="logoCv" width="300" height="120"></canvas>
+      <div class="gname"><span>GREEN</span>BLOCK</div>
+      <div class="gtag">Clear lines. Bury your rivals.</div>
+      <button class="btn primary" id="hostBtn">Host</button>
+      <button class="btn" id="soloBtn">Practise</button>
+    </div>
+    <div class="gcard">
+      <svg class="gicon" viewBox="0 0 150 60" aria-hidden="true">
+        <path d="M2 50 Q20 45 38 50 T74 50 T110 50 T148 50" fill="none" stroke="#2f8f9b" stroke-width="3" stroke-linecap="round"/>
+        <path d="M14 30 H118 Q132 30 140 40 Q132 46 118 46 H20 Q12 46 12 38 Q12 30 14 30 Z" fill="#1f6b4a"/>
+        <rect x="22" y="20" width="84" height="14" rx="3" fill="#7a2232"/>
+        <rect x="22" y="20" width="84" height="3" rx="1.5" fill="#f2c14e"/>
+        <g fill="#fff3c4"><circle cx="36" cy="28" r="2.6"/><circle cx="52" cy="28" r="2.6"/><circle cx="68" cy="28" r="2.6"/><circle cx="84" cy="28" r="2.6"/></g>
+        <path d="M14 38 H128" stroke="#f2c14e" stroke-width="2"/>
+        <rect x="96" y="10" width="5" height="11" fill="#2a2d3d"/>
+        <g fill="#8b90b2" opacity=".55"><circle cx="100" cy="6" r="3"/><circle cx="106" cy="3" r="2.2"/></g>
+      </svg>
+      <div class="gname">FIGHTY<span class="sky">BOATS</span></div>
+      <div class="gtag">Find and sink the canal fleet.</div>
+      <button class="btn primary" id="fbHostBtn">Host</button>
+      <button class="btn" id="fbSoloBtn">Vs computer</button>
+    </div>
+  </div>
+  <div class="card join-card">
+    <div class="lab">Join a game</div>
     <div class="row">
       <input id="codeIn" class="code-in" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE">
       <button class="btn blue" id="joinBtn">Join</button>
     </div>
     <div class="err" id="menuErr"></div>
-    <button class="btn" id="soloBtn">Practise solo</button>
   </div>
   <details class="how">
     <summary>How to play ▾</summary>
-    <p>Two or three phones, on <b>Wi-Fi or mobile data</b> (look for “online ✓” below). One player taps <b>Host</b> and reads out the 4-letter code; the others type it in and tap <b>Join</b>. The host taps <b>Start</b> when everyone is in.</p>
+    <p>Two or three phones, on <b>Wi-Fi or mobile data</b> (look for “online ✓” below). One player taps <b>Host</b> on a game and reads out the 4-letter code; the others type it in and tap <b>Join</b>. The host taps <b>Start</b> when everyone is in.</p>
+    <p class="howh">GreenBlock</p>
     <p><b>Tap</b> to rotate · <b>drag</b> sideways to move · <b>drag down</b> to soft drop · <b>flick down</b> to slam · <b>flick up</b> to hold.</p>
     <p>Clearing 2, 3 or 4 lines at once sends 1, 2 or 4 grey rows to a <b>random rival</b> (more for combos and back-to-back fours) — a pop-up tells you who got them. Clearing lines also cancels rows heading your way: watch the red bar. Last board standing wins the round; first to 2 rounds wins.</p>
     <p><b>Power-ups</b> (each once per round): the <b>bulldozer</b> clears your bottom 3 rows — nothing is sent to rivals. The <b>lightning bolt</b> makes every rival's next piece fall at double speed.</p>
+    <p class="howh">FightyBoats</p>
+    <p>Everyone hides five canal boats on their own 10×10 canal: <b>Narrowboat</b> (5), <b>Widebeam</b> (4), <b>Butty</b> (3), <b>Cruiser</b> (3) and <b>Tender</b> (2). Tap a boat, then tap the water to move it; tap it again to turn it. <b>Shuffle</b> places them at random.</p>
+    <p>Take turns firing one shot. With three players, pick whose waters to fire into using the name tabs. Every shot is called out to all players. Sink a whole fleet and that player is out; the last fleet afloat wins.</p>
   </details>
-  <div class="ver">v3.3 · 2–3 players · power-ups<span id="netState"></span></div>
+  <div class="ver">v4 · GreenBlock + FightyBoats<span id="netState"></span></div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -227,7 +303,24 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
 
 <div id="zoomNote">Zoomed in — pinch outwards with two fingers to see the whole game</div>
 
-<noscript><p style="padding:20px">GreenBlock needs JavaScript switched on.</p></noscript>
+<!-- ============ FIGHTYBOATS ============ -->
+<section id="boats" class="screen">
+  <div class="fb-top">
+    <div class="fb-title">FIGHTY<span>BOATS</span></div>
+    <div class="fb-score" id="fbScore"></div>
+    <button class="quit" id="fbQuit">Leave</button>
+  </div>
+  <div class="fb-status" id="fbStatus"></div>
+  <div class="fb-tabs" id="fbTabs"></div>
+  <div class="fb-main" id="fbMain">
+    <canvas id="fbCv"></canvas>
+    <div id="fbOverlay"></div>
+    <div class="fb-toast"><div id="fbToastPill"></div></div>
+  </div>
+  <div class="fb-bottom" id="fbBottom"></div>
+</section>
+
+<noscript><p style="padding:20px">These games need JavaScript switched on.</p></noscript>
 
 <script>
 'use strict';
@@ -243,7 +336,7 @@ const PEERJS_URL  = window.__GB_PEERJS_URL || 'https://unpkg.com/peerjs@1.5.5/di
 // Free Cloudflare game-room server (see server/). Lets phones play over mobile data.
 // Leave empty to play direct only (all phones on the same Wi-Fi).
 const ROOMS_URL   = window.__GB_ROOMS_URL ?? 'wss://greenblock-rooms.ric-green.workers.dev';
-const PROTO       = 3;
+const PROTO       = 4;
 const ID_PREFIX   = 'greenblock-v2-';
 const LOCAL       = new URLSearchParams(location.search).has('local');
 const COLS = 10, ROWS = 22, HIDDEN = 2, VIS = ROWS - HIDDEN;
@@ -633,6 +726,7 @@ const S = {
   opp:{}, oppDirty:false, lastHeard:0, lastSent:0, sentVer:-1,
   timers:[], joinTimer:null,
   pw:{clear:false, speed:false},   // power-ups still available this round
+  game:'block',                    // which game: 'block' (GreenBlock) or 'boats' (FightyBoats)
 };
 let game=null, peer=null;
 
@@ -646,11 +740,15 @@ function normPlayers(ps){ return (Array.isArray(ps)?ps:[]).slice(0,MAX_PLAYERS).
 function later(fn,ms){ const id=setTimeout(fn,ms); S.timers.push(id); return id; }
 function clearTimers(){ S.timers.forEach(clearTimeout); S.timers=[]; }
 const onGameScreen = () => $('#game').classList.contains('active');
+const onBoatsScreen = () => $('#boats').classList.contains('active');
+const inPlay = () => onGameScreen() || onBoatsScreen();
+const gameName = () => S.game==='boats' ? 'FightyBoats' : 'GreenBlock';
 
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id));
-  document.documentElement.classList.toggle('ingame', id==='game');
+  document.documentElement.classList.toggle('ingame', id==='game' || id==='boats');
   if (id==='game') requestAnimationFrame(layout);
+  if (id==='boats') requestAnimationFrame(()=>fbLayout());
   checkZoom();
 }
 function ovShow(html){ const o=$('#overlay'); o.innerHTML=html; o.classList.add('show'); }
@@ -692,7 +790,7 @@ const modeLine = () => modeNote() ? `<div class="small mode-${S.netMode}">${mode
 function hostLobby(){
   if (S.role!=='host' || S.inMatch || S.lost) return;
   const n=S.players.length;
-  lobby(`<div class="lab">Your game code</div><div class="bigcode">${esc(S.code)}</div>
+  lobby(`<div class="lab">${gameName()} · your game code</div><div class="bigcode">${esc(S.code)}</div>
     <div class="small">On the other phones, type this code and tap <b>Join</b>. Up to ${MAX_PLAYERS} players.</div>
     <div class="plist">${playerRows()}${n<MAX_PLAYERS?'<div class="empty">Waiting for players…</div>':''}</div>
     ${modeLine()}
@@ -701,7 +799,7 @@ function hostLobby(){
 }
 function guestLobby(){
   if (S.role!=='guest' || S.lost) return;
-  lobby(`<div class="ok">✓ Joined ${esc(hostName())}'s game</div>
+  lobby(`<div class="ok">✓ Joined ${esc(hostName())}'s ${gameName()} game</div>
     <div class="plist">${playerRows()}</div>
     ${modeLine()}
     <div class="spinner"></div><div class="small">Waiting for ${esc(hostName())} to start the match…</div>
@@ -715,7 +813,7 @@ function lobbyError(msg){
 $('#lobbyBody').addEventListener('click',e=>{
   const a=e.target.closest('[data-act]'); if (!a || a.disabled) return;
   if (a.dataset.act==='cancel') leave();
-  if (a.dataset.act==='start' && S.role==='host' && S.players.length>=2) startMatch();
+  if (a.dataset.act==='start' && S.role==='host' && S.players.length>=2){ if (S.game==='boats') fbStartMatch(); else startMatch(); }
 });
 
 /* ---------------- networking ---------------- */
@@ -887,13 +985,14 @@ function onHostMsg(link, m){
     while (S.players.some(p=>p.name.toLowerCase()===name.toLowerCase())) name=base.slice(0,10)+' '+(k++);
     link.id=id; link.name=name; S.pending.delete(link); S.links.set(id, link);
     S.players.push({id, name});
-    link.send({t:'welcome', you:id, v:PROTO});
+    link.send({t:'welcome', you:id, v:PROTO, game:S.game});
     broadcastRoster();
     hostLobby();
     return;
   }
   const id=link.id;
   if (S.links.get(id)!==link) return;
+  if (typeof m.t==='string' && m.t.startsWith('fb-')){ fbHostMsg(id, m); return; }
   switch (m.t){
     case 'b':
       if (m.r!==S.round) return;
@@ -937,8 +1036,10 @@ function removePlayer(id, msg){
   broadcast({t:'left', id, name});
   broadcastRoster();
   if (!S.inMatch){ hostLobby(); return; }
+  if (S.game==='boats') fbPlayerLeft(id);
   if (S.players.length<2){ aloneEnd(`${msg} There's no one left to play.`); return; }
   if (onGameScreen()){ showToast(`${esc(name)} left the game`, true); buildRivals(); updateHud(); }
+  if (onBoatsScreen()){ fbToast(`${esc(name)} left the game`, true); fbRoster(); }
 }
 function eliminate(id){
   if (S.roundOver || !S.alive.has(id)) return;
@@ -971,6 +1072,7 @@ function hostNextRound(){
 function aloneEnd(text){
   S.lost=true; S.playing=false; clearTimers(); updatePowerUI();
   if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">No rivals left</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
+  else if (onBoatsScreen()) fbOverlay(`<div class="ov-big lose mid-size">No rivals left</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-fbov="menu">Back to menu</button>`);
   else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
   teardown();
 }
@@ -1015,19 +1117,22 @@ function sendHello(){ toHost({t:'hello', name:S.myName, v:PROTO}); }
 function onGuestMsg(m){
   if (!m || typeof m!=='object' || S.role!=='guest' || S.lost) return;
   S.lastHeard=performance.now();
+  if (typeof m.t==='string' && m.t.startsWith('fb-')){ fbGuestMsg(m); return; }
   switch (m.t){
     case 'welcome':
       S.myId=m.you|0; S.connected=true; clearTimeout(S.joinTimer);
+      S.game = m.game==='boats' ? 'boats' : 'block';
       break;
     case 'roster': {
       const before=S.players;
       S.players=normPlayers(m.players);
       const ids=new Set(S.players.map(p=>p.id));
       before.forEach(p=>{ if (!ids.has(p.id)){ S.alive.delete(p.id); delete S.opp[p.id]; delete S.wins[p.id]; } });
-      if (onGameScreen()){ buildRivals(); updateHud(); } else guestLobby();
+      if (onGameScreen()){ buildRivals(); updateHud(); } else if (onBoatsScreen()) fbRoster(); else guestLobby();
       break; }
     case 'left':
       if (onGameScreen() && (m.id|0)!==S.myId) showToast(`${esc(cleanName(m.name))} left the game`, true);
+      else if (onBoatsScreen() && (m.id|0)!==S.myId) fbToast(`${esc(cleanName(m.name))} left the game`, true);
       break;
     case 'old':  lobbyError('This phone has a different version of GreenBlock from the host. Refresh the page on every phone and try again.'); break;
     case 'full': lobbyError('That game already has three players.'); break;
@@ -1062,6 +1167,7 @@ function connectionLost(msg){
   S.lost=true; S.playing=false; clearTimers(); updatePowerUI();
   const text = msg || `Lost the connection to ${hostName()}.`;
   if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
+  else if (onBoatsScreen()) fbOverlay(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-fbov="menu">Back to menu</button>`);
   else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
   teardown();
 }
@@ -1097,7 +1203,7 @@ function leave(){
   sayBye();
   clearTimers(); teardown();
   S.playing=false; S.role=null; S.mode=null; S.lost=false; S.connected=false; S.inMatch=false;
-  game=null; ovHide(); hideToast(); releaseWake();
+  game=null; ovHide(); hideToast(); releaseWake(); fbReset();
   showScreen('menu');
 }
 window.addEventListener('pagehide', sayBye);
@@ -1250,7 +1356,7 @@ function sendBoard(force){
 let wake=null;
 async function requestWake(){ try{ if ('wakeLock' in navigator && !wake){ wake=await navigator.wakeLock.request('screen'); wake.addEventListener('release',()=>{ wake=null; }); } }catch(_){ wake=null; } }
 function releaseWake(){ try{ if (wake) wake.release(); }catch(_){}; wake=null; }
-document.addEventListener('visibilitychange',()=>{ if (document.visibilityState==='visible' && game && onGameScreen()) requestWake(); });
+document.addEventListener('visibilitychange',()=>{ if (document.visibilityState==='visible' && ((game && onGameScreen()) || onBoatsScreen())) requestWake(); });
 
 /* ---------------- touch controls ---------------- */
 let G=null;
@@ -1307,16 +1413,16 @@ const VIEWPORT = document.querySelector('meta[name=viewport]');
 const VP_CONTENT = VIEWPORT ? VIEWPORT.getAttribute('content') : '';
 let zoomed=false, zoomResetTried=false;
 const interactive = t => !!(t && t.closest && t.closest('button,input,a,summary'));
-document.addEventListener('touchstart',e=>{ if (onGameScreen() && !zoomed && e.touches.length>1) e.preventDefault(); },{passive:false});
+document.addEventListener('touchstart',e=>{ if (inPlay() && !zoomed && e.touches.length>1) e.preventDefault(); },{passive:false});
 document.addEventListener('touchmove',e=>{
-  if (!onGameScreen()) return;
+  if (!inPlay()) return;
   if (zoomed && e.touches.length>1) return;          // let a pinch-out through when zoomed
   e.preventDefault();
 },{passive:false});
 // cancelling touchend stops the double-tap zoom; pointer events (which drive the controls) have already fired
-document.addEventListener('touchend',e=>{ if (onGameScreen() && !interactive(e.target)) e.preventDefault(); },{passive:false});
-document.addEventListener('dblclick',e=>{ if (onGameScreen()) e.preventDefault(); },{passive:false});
-['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>{ if (onGameScreen() && !zoomed) e.preventDefault(); },{passive:false}));
+document.addEventListener('touchend',e=>{ if (inPlay() && !interactive(e.target)) e.preventDefault(); },{passive:false});
+document.addEventListener('dblclick',e=>{ if (inPlay()) e.preventDefault(); },{passive:false});
+['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>{ if (inPlay() && !zoomed) e.preventDefault(); },{passive:false}));
 function resetZoom(){
   // re-applying the viewport settings can make Safari snap back to 100% (not guaranteed)
   if (!VIEWPORT) return;
@@ -1325,7 +1431,7 @@ function resetZoom(){
 }
 function checkZoom(){
   const vv=window.visualViewport; if (!vv) return;
-  const z = onGameScreen() && vv.scale > 1.04;
+  const z = inPlay() && vv.scale > 1.04;
   if (z!==zoomed){ zoomed=z; document.documentElement.classList.toggle('zoomed', z); }
   const note=$('#zoomNote');
   if (z){
@@ -1359,7 +1465,9 @@ function loadName(){ try{ return localStorage.getItem('bd_name')||''; }catch(_){
 function saveName(n){ try{ localStorage.setItem('bd_name',n); }catch(_){} }
 $('#nameIn').value=loadName();
 function readName(){ const n=cleanName($('#nameIn').value); S.myName=n; saveName(n); return n; }
-$('#hostBtn').addEventListener('click',()=>{ $('#menuErr').textContent=''; readName(); hostGame(); });
+$('#hostBtn').addEventListener('click',()=>{ $('#menuErr').textContent=''; readName(); S.game='block'; hostGame(); });
+$('#fbHostBtn').addEventListener('click',()=>{ $('#menuErr').textContent=''; readName(); S.game='boats'; hostGame(); });
+$('#fbSoloBtn').addEventListener('click',()=>{ readName(); fbStartSolo(); });
 $('#joinBtn').addEventListener('click',()=>{
   const code=$('#codeIn').value.trim().toUpperCase().replace(/[^A-Z]/g,'');
   if (code.length!==4){ $('#menuErr').textContent='Enter the 4-letter code from the host’s screen.'; return; }
@@ -1367,12 +1475,12 @@ $('#joinBtn').addEventListener('click',()=>{
 });
 $('#codeIn').addEventListener('input',e=>{ e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4); });
 $('#codeIn').addEventListener('keydown',e=>{ if (e.key==='Enter') $('#joinBtn').click(); });
-$('#soloBtn').addEventListener('click',()=>{ readName(); startPractice(); });
+$('#soloBtn').addEventListener('click',()=>{ readName(); S.game='block'; startPractice(); });
 $('#quitBtn').addEventListener('click',()=>{
   if (S.mode==='versus' && !S.lost && !confirm('Leave the match?')) return;
   leave();
 });
-window.addEventListener('resize',()=>{ if (onGameScreen()) layout(); });
+window.addEventListener('resize',()=>{ if (onGameScreen()) layout(); if (onBoatsScreen()) fbLayout(); });
 
 /* ---------------- main loop ---------------- */
 let last=performance.now();
@@ -1381,6 +1489,7 @@ function frame(t){
   if (game && S.playing) game.update(dt);
   if (S.mode==='versus' && S.playing) sendBoard(false);
   render();
+  if (onBoatsScreen() && typeof fbFrame==='function') fbFrame(t);
   requestAnimationFrame(frame);
 }
 drawLogo();
@@ -1391,5 +1500,6 @@ requestAnimationFrame(frame);
 // test hook (harmless in normal play)
 window.__bd = {S, get game(){ return game; }, checkZoom, usePower};
 </script>
+<script src="fightyboats.js?v=4"></script>
 </body>
 </html>

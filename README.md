@@ -1,11 +1,11 @@
-# GreenBlock
+# Green Games
 
-A falling-block battle for two or three phones on the same Wi-Fi. Everyone plays at once on their own board; clearing several lines at once sends grey rows to a random rival, and a pop-up tells you who got them. Last board standing wins the round, first to two rounds wins the match.
+Two family games for phones, hosted on GitHub Pages: **GreenBlock** (a falling-block battle) and **FightyBoats** (canal-boat battleships). Two or three players, on Wi-Fi or mobile data; each game also has a solo mode.
 
 ## Playing
 
 1. Every phone opens the game link in Safari (optionally Share → **Add to Home Screen** for a full-screen app icon).
-2. One player taps **Host a game** and reads out the 4-letter code.
+2. One player taps **Host** on the game they want and reads out the 4-letter code.
 3. The others type the code and tap **Join**. The host taps **Start match** once two or three players are in.
 
 **Controls:** tap to rotate · drag sideways to move · drag down to soft drop · flick down to drop · flick up to hold. On a computer: arrow keys, Space to drop, Z/X to rotate, C to hold.
@@ -20,9 +20,17 @@ In solo practice only the bulldozer is available.
 
 **Three players:** when someone tops out they watch the rest of the round; the last one standing takes it. If a player leaves mid-match the others carry on.
 
+## FightyBoats
+
+Each player hides five canal boats on their own 10×10 canal — Narrowboat (5), Widebeam (4), Butty (3), Cruiser (3) and Tender (2). Tap a boat, then tap the water to move it; tap it again to turn it; **Shuffle** places them at random; **Ready!** when done.
+
+Players take turns firing one shot. Tap a square to aim, then tap it again (or press Fire). With three players, the name tabs choose whose waters you fire into. Every shot and result is shown to everyone; sunk boats are revealed. A player whose whole fleet is sunk is out and watches; the last fleet afloat wins. After the game everyone's boats are revealed, and **Rematch** keeps a running score. **Vs computer** plays against a computer that hunts on a checkerboard and follows up its hits.
+
+Each phone keeps its own fleet secret and answers the shots fired at it; the host's phone keeps track of turns, who is out and who has won. The code is in `fightyboats.js`.
+
 ## How it works
 
-Everything the phones run is in `index.html` — no build step. The host's phone is the hub: it decides who is out and who wins each round, and passes boards and attacks between the other phones. Everyone gets the same piece sequence each round from a shared random seed.
+Everything the phones run is in `index.html` (home screen, lobby, connections and GreenBlock) and `fightyboats.js` — no build step. The host's phone is the hub: it decides who is out and who wins each round, and passes boards and attacks between the other phones. Everyone gets the same piece sequence each round from a shared random seed.
 
 The phones can be linked two ways:
 
