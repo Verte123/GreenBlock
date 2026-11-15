@@ -231,7 +231,7 @@ function chBest(st, ms, maxDepth){
 /* ---------------- game state ---------------- */
 const CH = {
   phase: 'idle',            // idle | play | over
-  g: 0, st: null, hist: [], // hist: [{st (position before the move), m, mover}]
+  g: 0, sid: '', st: null, hist: [], // hist: [{st (position before the move), m, mover}]
   white: -1, black: -1, me: 'w', lastWhite: -1,
   sel: -1, targets: [], last: null, hint: null, promo: null,
   pw: {undo: true, hint: true}, undoLeft: {w: true, b: true},
@@ -248,13 +248,52 @@ const chOpp = () => CH.me === 'w' ? 'b' : 'w';
 const chColorOf = id => id === CH.white ? 'w' : id === CH.black ? 'b' : null;
 const chMyTurn = () => CH.phase === 'play' && CH.st && CH.st.turn === CH.me;
 
+/* ---------------- saved game ----------------
+   Each phone keeps one unfinished game in its own browser storage, updated after every move.
+   Whoever hosts next can resume it from the lobby. */
+const CH_SAVE_KEY = 'gg_chess_save' + (new URLSearchParams(location.search).get('slot') || '');
+function chReadSave(){
+  try{
+    const d = JSON.parse(localStorage.getItem(CH_SAVE_KEY) || 'null');
+    return d && d.v === 1 && Array.isArray(d.moves) && d.moves.length ? d : null;
+  }catch(_){ return null; }
+}
+function chSave(){
+  if (CH.phase !== 'play' || !CH.hist.length) return;
+  const opp = chId(chOpp());
+  try{
+    localStorage.setItem(CH_SAVE_KEY, JSON.stringify({v: 1, sid: CH.sid, at: Date.now(), me: CH.me, opp: nameOf(opp),
+      moves: CH.hist.map(e => [e.m.from, e.m.to, e.m.promo || '']), undoLeft: CH.undoLeft, hint: CH.pw.hint,
+      score: [CH.tally[S.myId] | 0, CH.tally[opp] | 0]}));
+  }catch(_){}
+}
+function chClearSave(){ try{ const d = chReadSave(); if (d && d.sid === CH.sid) localStorage.removeItem(CH_SAVE_KEY); }catch(_){} }
+function chSaveLabel(){
+  const d = chReadSave(); if (!d) return '';
+  const n = Math.ceil(d.moves.length / 2), days = Math.floor((Date.now() - (d.at || 0)) / 86400000);
+  return `vs ${String(d.opp || 'rival').slice(0, 12)} · ${n} move${n === 1 ? '' : 's'} in · ${days <= 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago'}`;
+}
+// Replay a list of moves from the starting position (used for saved games and catching up).
+function chReplay(moves, undoLeft){
+  let st = chFromFen(CH_START); const hist = [];
+  for (const mv of (Array.isArray(moves) ? moves : []).slice(0, 2000)){
+    const cand = chLegal(st).find(x => x.from === (mv[0] | 0) && x.to === (mv[1] | 0) && (x.promo || '') === String(mv[2] || ''));
+    if (!cand) break;
+    hist.push({st, m: cand, mover: st.turn}); st = chMake(st, cand);
+  }
+  CH.st = st; CH.hist = hist;
+  const u = undoLeft || {}; CH.undoLeft = {w: u.w !== false, b: u.b !== false}; CH.pw.undo = CH.undoLeft[CH.me];
+  const e = hist[hist.length - 1]; CH.last = e ? {from: e.m.from, to: e.m.to} : null;
+  CH.anim = null; CH.awaiting = false; CH.sel = -1; CH.targets = []; CH.hint = null;
+}
+
 /* ---------------- starting games ---------------- */
 function chReset(){
   CH.phase = 'idle'; CH.st = null; CH.hist = []; CH.tally = {}; CH.lastWhite = -1; CH.anim = null;
   CH.awaiting = false; CH.thinking = false; CH.pendingOver = false; CH.over = null;
   chOvHide();
 }
-function chBegin(white, g){
+function chBegin(white, g, sid, resume){
   const other = S.players.find(p => p.id !== white);
   CH.g = g; CH.white = white; CH.black = other ? other.id : -1; CH.me = white === S.myId ? 'w' : 'b';
   CH.st = chFromFen(CH_START); CH.hist = []; CH.phase = 'play';
@@ -262,18 +301,34 @@ function chBegin(white, g){
   CH.pw = {undo: true, hint: true}; CH.undoLeft = {w: true, b: true};
   CH.over = null; CH.pendingOver = false; CH.awaiting = false; CH.thinking = false; CH.anim = null;
   S.mode = 'chess'; S.playing = false;
+  CH.sid = String(sid || '');
+  if (resume){
+    chReplay(resume.moves, resume.undoLeft);
+    const mine = chReadSave(); if (mine && mine.sid === CH.sid) CH.pw.hint = mine.hint !== false;   // my own hint, as I left it
+  }
   chOvHide(); showScreen('chess'); chUpdate(); requestWake();
-  chToast(CH.me === 'w' ? 'You are the <b>cream</b> team — you move first' : 'You are the <b>purple</b> team', true, 2600);
+  if (resume){ chSave(); chToast(`Saved game resumed — you are the <b>${CH.me === 'w' ? 'cream' : 'purple'}</b> team`, true, 3000); }
+  else chToast(CH.me === 'w' ? 'You are the <b>cream</b> team — you move first' : 'You are the <b>purple</b> team', true, 2600);
 }
-function chStartMatch(){                         // host, after Start (or Rematch)
+function chStartMatch(resumeSaved){               // host, after Start, Resume or Rematch
   if (S.role !== 'host' || S.players.length !== 2 || S.lost) return;
   clearTimers(); S.inMatch = true;
-  const ids = S.players.map(p => p.id);
-  const white = CH.lastWhite < 0 || !ids.includes(CH.lastWhite) ? ids[Math.floor(Math.random() * 2)] : ids.find(id => id !== CH.lastWhite);
+  const ids = S.players.map(p => p.id), other = ids.find(id => id !== S.myId);
+  const save = resumeSaved ? chReadSave() : null;
+  let white, sid, resume = null;
+  if (save){                                     // carry on: I keep the side I had
+    white = save.me === 'w' ? S.myId : other; sid = save.sid || '';
+    resume = {moves: save.moves, undoLeft: save.undoLeft};
+    const sc = Array.isArray(save.score) ? save.score : [0, 0];
+    CH.tally = {[S.myId]: sc[0] | 0, [other]: sc[1] | 0};
+  } else {
+    white = CH.lastWhite < 0 || !ids.includes(CH.lastWhite) ? ids[Math.floor(Math.random() * 2)] : ids.find(id => id !== CH.lastWhite);
+    sid = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  }
   CH.lastWhite = white;                          // sides swap each game
   const g = (CH.g | 0) + 1;
-  broadcast({t: 'ch-start', g, white, players: S.players, tally: CH.tally});
-  chBegin(white, g);
+  broadcast({t: 'ch-start', g, white, sid, resume, players: S.players, tally: CH.tally});
+  chBegin(white, g, sid, resume);
 }
 function chRematch(btn){
   if (S.lost) return leave();
@@ -332,6 +387,7 @@ function chApply(ev){
   } else return;
   CH.awaiting = false; CH.sel = -1; CH.targets = []; CH.hint = null;
   if (CH.promo){ CH.promo = null; chOvHide(); }
+  chSave();
   if (S.role === 'host'){
     const res = chResult(CH.st, CH.hist);
     if (res){
@@ -347,7 +403,7 @@ function chOver(m){
   if (CH.phase !== 'play') return;
   CH.phase = 'over'; CH.over = {type: String(m.type), winner: m.winner | 0}; CH.tally = m.tally || {};
   CH.pendingOver = true; CH.sel = -1; CH.targets = []; CH.hint = null; CH.awaiting = false;
-  chUpdate();
+  chClearSave(); chUpdate();
 }
 const CH_END = {mate: 'Checkmate', stalemate: 'Stalemate — no legal moves', fifty: 'Draw — 50 moves with no capture or squire move',
                 threefold: 'Draw — the same position three times', material: 'Draw — not enough pieces left to win'};
@@ -376,18 +432,9 @@ function chAskSync(){
   CH.syncT = now; toHost({t: 'ch-sync', g: CH.g});
 }
 function chLoadState(m){
-  let st = chFromFen(CH_START); const hist = [];
-  for (const mv of (Array.isArray(m.moves) ? m.moves : []).slice(0, 2000)){
-    const cand = chLegal(st).find(x => x.from === (mv[0] | 0) && x.to === (mv[1] | 0) && (x.promo || '') === String(mv[2] || ''));
-    if (!cand) break;
-    hist.push({st, m: cand, mover: st.turn}); st = chMake(st, cand);
-  }
-  CH.st = st; CH.hist = hist;
-  const u = m.undoLeft || {}; CH.undoLeft = {w: u.w !== false, b: u.b !== false}; CH.pw.undo = CH.undoLeft[CH.me];
-  const e = hist[hist.length - 1]; CH.last = e ? {from: e.m.from, to: e.m.to} : null;
-  CH.anim = null; CH.awaiting = false; CH.sel = -1; CH.targets = []; CH.hint = null;
+  chReplay(m.moves, m.undoLeft);
   if (CH.promo){ CH.promo = null; chOvHide(); }
-  chUpdate();
+  chSave(); chUpdate();
 }
 function chHostMsg(id, m){
   if (S.game !== 'chess') return;
@@ -400,7 +447,7 @@ function chGuestMsg(m){
   if (m.t === 'ch-start'){
     S.game = 'chess'; S.inMatch = true; S.players = normPlayers(m.players);
     CH.tally = normWins(m.tally);
-    chBegin(m.white | 0, m.g | 0);
+    chBegin(m.white | 0, m.g | 0, String(m.sid || '').slice(0, 40), m.resume && Array.isArray(m.resume.moves) ? m.resume : null);
     return;
   }
   if ((m.g | 0) !== CH.g) return;
@@ -424,7 +471,7 @@ function chHint(){
     const m = chBest(CH.st, 900);
     CH.thinking = false;
     if (CH.phase === 'play' && CH.g === g && CH.hist.length === n && m){
-      CH.pw.hint = false; CH.hint = {from: m.from, to: m.to};
+      CH.pw.hint = false; CH.hint = {from: m.from, to: m.to}; chSave();
       chToast(`💡 Try your <b>${CH_NAMES[m.p.toLowerCase()]}</b>: ${chSqName(m.from)} → ${chSqName(m.to)}`, false, 3200);
     }
     chUpdate();
@@ -767,7 +814,7 @@ $('#chUndo').addEventListener('click', chUndo);
 $('#chHint').addEventListener('click', chHint);
 $('#chAgain').addEventListener('click', e => chRematch(e.currentTarget));
 $('#chQuit').addEventListener('click', () => {
-  if (!S.lost && CH.phase === 'play' && !confirm('Leave the game?')) return;
+  if (!S.lost && CH.phase === 'play' && !confirm(CH.hist.length ? 'Leave the game? It is saved, so you can resume it later.' : 'Leave the game?')) return;
   leave();
 });
 let chDown = null;

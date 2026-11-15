@@ -283,8 +283,9 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
     <p class="howh">ScrappyChess</p>
     <p>Chess for two, with the usual rules. The pieces are the <b>King</b>, <b>Queen</b>, <b>Tower</b> (rook), <b>Wizard</b> (bishop), <b>Knight</b> and <b>Squire</b> (pawn). Tap a piece, then tap a dot to move there; a red ring means you can take that piece. Taking a piece plays a short battle — tap to skip it. Sides swap each rematch.</p>
     <p><b>Power-ups</b> (each once per game): <b>Undo</b> takes back your last move (and your rival's reply, if they have already made one). <b>Hint</b> shows a move suggested by the built-in chess computer.</p>
+    <p><b>Saved games:</b> an unfinished game is saved on each phone after every move. To carry on later, either player taps <b>Host</b> on ScrappyChess and, once the other has joined, <b>Resume saved game</b>. Each phone keeps one saved game.</p>
   </details>
-  <div class="ver">v5 · 3 games<span id="netState"></span></div>
+  <div class="ver">v5.1 · 3 games<span id="netState"></span></div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -858,6 +859,7 @@ function hostLobby(){
     <div class="plist">${playerRows()}${n<maxPlayers()?`<div class="empty">Waiting for ${S.game==='chess'?'the other player':'players'}…</div>`:''}</div>
     ${modeLine()}
     <button class="btn primary" data-act="start"${n<2?' disabled':''}>${n<2?'Start match':`Start match · ${n} players`}</button>
+    ${S.game==='chess' && typeof chSaveLabel==='function' && chSaveLabel() ? `<button class="btn blue" data-act="resume"${n<2?' disabled':''}>Resume saved game<br><small style="font-weight:600">${esc(chSaveLabel())}</small></button>` : ''}
     <button class="btn" data-act="cancel">Cancel</button>`);
 }
 function guestLobby(){
@@ -876,6 +878,7 @@ function lobbyError(msg){
 $('#lobbyBody').addEventListener('click',e=>{
   const a=e.target.closest('[data-act]'); if (!a || a.disabled) return;
   if (a.dataset.act==='cancel') leave();
+  if (a.dataset.act==='resume' && S.role==='host' && S.game==='chess' && S.players.length===2) chStartMatch(true);
   if (a.dataset.act==='start' && S.role==='host' && S.players.length>=2){ if (S.game==='boats') fbStartMatch(); else if (S.game==='chess') chStartMatch(); else startMatch(); }
 });
 
@@ -1137,7 +1140,7 @@ function aloneEnd(text){
   S.lost=true; S.playing=false; clearTimers(); updatePowerUI();
   if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">No rivals left</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
   else if (onBoatsScreen()) fbOverlay(`<div class="ov-big lose mid-size">No rivals left</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-fbov="menu">Back to menu</button>`);
-  else if (onChessScreen()) chOverlay(`<div class="ov-big lose mid-size">Game ended</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-chov="menu">Back to menu</button>`);
+  else if (onChessScreen()) chOverlay(`<div class="ov-big lose mid-size">Game ended</div><div class="ov-sub">${esc(text)}${CH.phase==='play' && CH.hist.length ? '<br>The game is saved — host again to resume it.' : ''}</div><button class="btn primary" data-chov="menu">Back to menu</button>`);
   else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
   teardown();
 }
@@ -1234,7 +1237,7 @@ function connectionLost(msg){
   const text = msg || `Lost the connection to ${hostName()}.`;
   if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
   else if (onBoatsScreen()) fbOverlay(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-fbov="menu">Back to menu</button>`);
-  else if (onChessScreen()) chOverlay(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-chov="menu">Back to menu</button>`);
+  else if (onChessScreen()) chOverlay(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}${CH.phase==='play' && CH.hist.length ? '<br>The game is saved — host again to resume it.' : ''}</div><button class="btn primary" data-chov="menu">Back to menu</button>`);
   else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
   teardown();
 }
@@ -1570,6 +1573,6 @@ requestAnimationFrame(frame);
 window.__bd = {S, get game(){ return game; }, checkZoom, usePower};
 </script>
 <script src="fightyboats.js?v=5"></script>
-<script src="chess.js?v=5"></script>
+<script src="chess.js?v=5.1"></script>
 </body>
 </html>

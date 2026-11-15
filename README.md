@@ -42,6 +42,8 @@ Chess for two with the full rules (castling, en passant, promotion with a choice
 - **Undo** — takes back your last move; if your rival has already replied, their reply is taken back too. Your rival is told.
 - **Hint** — a small chess computer built into the page looks a few moves ahead and shows a suggested move.
 
+**Saved games:** an unfinished game is saved in each phone's browser storage after every move (one saved game per phone). To carry on, either player hosts ScrappyChess and taps **Resume saved game** in the lobby once the other has joined; the position, sides, score and used power-ups come back. A finished game is removed. Starting a new game instead replaces the saved one once the first move is made.
+
 The host's phone puts the moves in order: the other phone asks to move, the host checks the move is legal and tells both phones. If a phone ever falls out of step it asks the host for the full list of moves. The code is in `chess.js`; the rules are checked against published move counts ("perft") for six test positions.
 
 ## How it works
