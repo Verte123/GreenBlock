@@ -34,9 +34,12 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
 .screen.active{display:flex}
 
 /* ---------- menu ---------- */
-#menu{justify-content:center;gap:14px;overflow-y:auto}
+#menu{justify-content:flex-start;gap:10px;overflow-y:auto}
+#menu>:first-child{margin-top:auto}
+#menu>:last-child{margin-bottom:auto}
 .logo{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:6px}
-#logoCv{width:110px;height:44px}
+#logoCv{width:70px;height:28px;display:block}
+#chLogo{width:70px;height:27.5px;display:block}
 .title{font-size:42px;font-weight:900;letter-spacing:.06em;line-height:1}
 .title span{color:var(--mint)}
 .tag{color:var(--muted);font-size:14px}
@@ -62,13 +65,18 @@ details.how b{color:var(--ink)}
 .ver{font-size:11px;color:var(--muted);opacity:.75}
 #menu .title{font-size:34px;margin-bottom:2px}
 .name-card,.join-card{padding:12px 14px;gap:8px}
-.games{width:100%;max-width:340px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.gcard{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;min-width:0}
-.gcard .gicon{width:110px;height:44px}
-.gname{font-weight:900;font-size:16px;letter-spacing:.04em;white-space:nowrap}
-.gname span{color:var(--mint)} .gname span.sky{color:var(--sky)}
-.gtag{font-size:11.5px;color:var(--muted);line-height:1.3;min-height:2.6em}
-.gcard .btn{padding:11px 6px;font-size:15px}
+.games{width:100%;max-width:340px;display:flex;flex-direction:column;gap:8px}
+.gcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:9px 10px;display:flex;align-items:center;gap:9px;min-width:0}
+.gpic{flex:none;width:70px;display:flex;align-items:center;justify-content:center}
+.ginfo{flex:1;min-width:0}
+.gbtns{flex:none;display:flex;gap:6px;width:116px}
+.gbtns .btn{flex:1}
+@media (max-width:350px){.gpic{display:none}}
+.gcard .gicon{width:70px;height:28px;display:block}
+.gname{font-weight:900;font-size:14px;letter-spacing:.03em;white-space:nowrap}
+.gname span{color:var(--mint)} .gname span.sky{color:var(--sky)} .gname span.amber{color:var(--amber)}
+.gtag{font-size:11px;color:var(--muted);line-height:1.25;margin-top:2px}
+.gcard .btn{padding:10px 4px;font-size:14px;border-radius:12px}
 .howh{color:var(--ink)!important;font-weight:800;margin-bottom:0!important}
 
 /* ---------- FightyBoats ---------- */
@@ -90,9 +98,9 @@ details.how b{color:var(--ink)}
 .fb-tab.out{opacity:.45}
 .fb-main{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;position:relative}
 #fbCv{display:block}
-#fbOverlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(14,15,22,.82);border-radius:12px;text-align:center;padding:16px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);z-index:4}
-#fbOverlay.show{display:flex}
-#fbOverlay .btn{max-width:240px}
+#fbOverlay,#chOverlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(14,15,22,.82);border-radius:12px;text-align:center;padding:16px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);z-index:4}
+#fbOverlay.show,#chOverlay.show{display:flex}
+#fbOverlay .btn,#chOverlay .btn{max-width:240px}
 .fb-toast{position:absolute;left:0;right:0;top:14%;display:flex;justify-content:center;pointer-events:none;z-index:3}
 .fb-bottom{width:100%;max-width:480px;display:flex;gap:10px;align-items:stretch;min-height:120px}
 .fb-bottom.place{flex-direction:column;align-items:center;gap:10px}
@@ -115,6 +123,24 @@ details.how b{color:var(--ink)}
 .fb-pw.on{background:var(--amber);color:#2a1800}
 .fb-pw.used{opacity:.32;filter:grayscale(1);border-color:var(--line);color:var(--muted)}
 .fb-pw:disabled:not(.used){opacity:.5}
+/* ---------- ScrappyChess ---------- */
+#chess{padding-left:10px;padding-right:10px;gap:6px}
+#chess .fb-title span{color:var(--amber)}
+.ch-strip{width:100%;max-width:480px;display:flex;align-items:center;gap:8px;padding:3px 8px;border-radius:10px;border:1.5px solid transparent;min-height:30px}
+.ch-strip.turn{border-color:var(--amber);background:var(--panel)}
+.ch-dot{width:14px;height:14px;border-radius:50%;border:2px solid #3a2a1a;flex:none}
+.ch-dot.w{background:#f6ecd4}
+.ch-dot.b{background:#4a4696;border-color:#a5a2ff}
+.ch-nm{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.ch-strip canvas{flex:none;display:block}
+.ch-main{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;position:relative}
+#chCv{display:block;border-radius:8px}
+.ch-btns{width:100%;max-width:480px;display:flex;gap:8px}
+.ch-btns .fb-pw{padding:9px 6px;font-size:14px}
+.ch-btns .btn{flex:1;padding:11px}
+.ch-promo{display:flex;gap:8px}
+.ch-promo button{background:#c2dba6;border:2px solid var(--amber);border-radius:12px;padding:3px}
+.ch-promo canvas{display:block;width:56px;height:56px}
 .fb-wait{font-size:13px;color:var(--muted);text-align:center;line-height:1.5}
 .fb-wait b{color:var(--mint)}
 
@@ -179,11 +205,11 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
 .ov-big.win{color:var(--mint)} .ov-big.lose{color:var(--coral)}
 .ov-sub{font-size:15px;color:var(--muted);line-height:1.45}
 #toast{position:absolute;left:11px;right:0;top:24%;display:flex;justify-content:center;pointer-events:none;z-index:3}
-#toastPill,#fbToastPill{background:rgba(18,19,28,.8);border:1px solid var(--amber);color:var(--amber);font-weight:800;font-size:15px;padding:7px 14px;border-radius:999px;
+#toastPill,#fbToastPill,#chToastPill{background:rgba(18,19,28,.8);border:1px solid var(--amber);color:var(--amber);font-weight:800;font-size:15px;padding:7px 14px;border-radius:999px;
   white-space:normal;text-align:center;line-height:1.25;max-width:92%;overflow-wrap:anywhere;opacity:0;transform:translateY(-6px);transition:opacity .15s,transform .15s}
-#toastPill.show,#fbToastPill.show{opacity:1;transform:none}
-#toastPill b,#fbToastPill b{color:var(--ink)}
-#toastPill.info,#fbToastPill.info{border-color:var(--line);color:var(--muted)}
+#toastPill.show,#fbToastPill.show,#chToastPill.show{opacity:1;transform:none}
+#toastPill b,#fbToastPill b,#chToastPill b{color:var(--ink)}
+#toastPill.info,#fbToastPill.info,#chToastPill.info{border-color:var(--line);color:var(--muted)}
 .hint{font-size:11px;color:var(--muted);text-align:center}
 /* power-up buttons */
 .pw{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:6px 2px 5px;border-radius:12px;background:var(--panel2);border:1.5px solid var(--amber)}
@@ -211,14 +237,12 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
   </div>
   <div class="games">
     <div class="gcard">
-      <canvas id="logoCv" width="300" height="120"></canvas>
-      <div class="gname"><span>GREEN</span>BLOCK</div>
-      <div class="gtag">Clear lines. Bury your rivals.</div>
-      <button class="btn primary" id="hostBtn">Host</button>
-      <button class="btn" id="soloBtn">Practise</button>
+      <div class="gpic"><canvas id="logoCv" width="300" height="120"></canvas></div>
+      <div class="ginfo"><div class="gname"><span>GREEN</span>BLOCK</div><div class="gtag">Clear lines, bury your rivals. 2–3 players.</div></div>
+      <div class="gbtns"><button class="btn primary" id="hostBtn">Host</button><button class="btn" id="soloBtn">Solo</button></div>
     </div>
     <div class="gcard">
-      <svg class="gicon" viewBox="0 0 150 60" aria-hidden="true">
+      <div class="gpic"><svg class="gicon" viewBox="0 0 150 60" aria-hidden="true">
         <path d="M2 50 Q20 45 38 50 T74 50 T110 50 T148 50" fill="none" stroke="#2f8f9b" stroke-width="3" stroke-linecap="round"/>
         <path d="M14 30 H118 Q132 30 140 40 Q132 46 118 46 H20 Q12 46 12 38 Q12 30 14 30 Z" fill="#1f6b4a"/>
         <rect x="22" y="20" width="84" height="14" rx="3" fill="#7a2232"/>
@@ -227,11 +251,14 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
         <path d="M14 38 H128" stroke="#f2c14e" stroke-width="2"/>
         <rect x="96" y="10" width="5" height="11" fill="#2a2d3d"/>
         <g fill="#8b90b2" opacity=".55"><circle cx="100" cy="6" r="3"/><circle cx="106" cy="3" r="2.2"/></g>
-      </svg>
-      <div class="gname">FIGHTY<span class="sky">BOATS</span></div>
-      <div class="gtag">Find and sink the canal fleet.</div>
-      <button class="btn primary" id="fbHostBtn">Host</button>
-      <button class="btn" id="fbSoloBtn">Vs computer</button>
+      </svg></div>
+      <div class="ginfo"><div class="gname">FIGHTY<span class="sky">BOATS</span></div><div class="gtag">Find and sink the canal fleet. 2–3 players.</div></div>
+      <div class="gbtns"><button class="btn primary" id="fbHostBtn">Host</button><button class="btn" id="fbSoloBtn">Solo</button></div>
+    </div>
+    <div class="gcard">
+      <div class="gpic"><canvas id="chLogo" width="224" height="88"></canvas></div>
+      <div class="ginfo"><div class="gname">SCRAPPY<span class="amber">CHESS</span></div><div class="gtag">Chess with battling castle folk. 2 players.</div></div>
+      <div class="gbtns"><button class="btn primary" id="chHostBtn">Host</button></div>
     </div>
   </div>
   <div class="card join-card">
@@ -253,8 +280,11 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
     <p>Everyone hides five canal boats on their own 10×10 canal: <b>Narrowboat</b> (5), <b>Widebeam</b> (4), <b>Butty</b> (3), <b>Cruiser</b> (3) and <b>Tender</b> (2). Tap a boat, then tap the water to move it; tap it again to turn it. <b>Shuffle</b> places them at random.</p>
     <p>Take turns firing one shot. With three players, pick whose waters to fire into using the name tabs. Every shot is called out to all players. Sink a whole fleet and that player is out; the last fleet afloat wins.</p>
     <p><b>Power-ups</b> (each once per game): <b>Move boat</b> — any time, without using your turn, move one boat into water nobody has fired at; a damaged boat keeps its damage, and your rivals are told. <b>Big bomb</b> — instead of a shot, hit two squares side by side (tap the square again to turn it across or down).</p>
+    <p class="howh">ScrappyChess</p>
+    <p>Chess for two, with the usual rules. The pieces are the <b>King</b>, <b>Queen</b>, <b>Tower</b> (rook), <b>Wizard</b> (bishop), <b>Knight</b> and <b>Squire</b> (pawn). Tap a piece, then tap a dot to move there; a red ring means you can take that piece. Taking a piece plays a short battle — tap to skip it. Sides swap each rematch.</p>
+    <p><b>Power-ups</b> (each once per game): <b>Undo</b> takes back your last move (and your rival's reply, if they have already made one). <b>Hint</b> shows a move suggested by the built-in chess computer.</p>
   </details>
-  <div class="ver">v4.1 · GreenBlock + FightyBoats<span id="netState"></span></div>
+  <div class="ver">v5 · 3 games<span id="netState"></span></div>
 </section>
 
 <!-- ============ LOBBY ============ -->
@@ -328,6 +358,28 @@ html.zoomed #game,html.zoomed #game *{touch-action:manipulation}
   <div class="fb-bottom" id="fbBottom"></div>
 </section>
 
+<!-- ============ SCRAPPYCHESS ============ -->
+<section id="chess" class="screen">
+  <div class="fb-top">
+    <div class="fb-title">SCRAPPY<span>CHESS</span></div>
+    <div class="fb-score" id="chScore"></div>
+    <button class="quit" id="chQuit">Leave</button>
+  </div>
+  <div class="ch-strip" id="chTop"><span class="ch-dot" id="chTopDot"></span><span class="ch-nm" id="chTopName"></span><canvas id="chTopCap" width="190" height="22" style="width:190px;height:22px"></canvas></div>
+  <div class="ch-main" id="chMain">
+    <canvas id="chCv" width="16" height="16"></canvas>
+    <div id="chOverlay"></div>
+    <div class="fb-toast"><div id="chToastPill"></div></div>
+  </div>
+  <div class="ch-strip" id="chBot"><span class="ch-dot" id="chBotDot"></span><span class="ch-nm" id="chBotName"></span><canvas id="chBotCap" width="190" height="22" style="width:190px;height:22px"></canvas></div>
+  <div class="fb-status" id="chStatus"></div>
+  <div class="ch-btns">
+    <button class="fb-pw" id="chUndo"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12 7 5 13l7 6" fill="none" stroke="#ffb03b" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 13h13a8 8 0 0 1 0 16h-6" fill="none" stroke="#ffb03b" stroke-width="3.2" stroke-linecap="round"/></svg><span>Undo</span></button>
+    <button class="fb-pw" id="chHint"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3a9 9 0 0 0-5 16.5V23h10v-3.5A9 9 0 0 0 16 3z" fill="#ffd23f" stroke="#c98a12" stroke-width="1.8"/><rect x="11.5" y="24.5" width="9" height="2.6" rx="1.3" fill="#8b90b2"/><rect x="13" y="28" width="6" height="2.4" rx="1.2" fill="#8b90b2"/></svg><span>Hint</span></button>
+    <button class="btn primary" id="chAgain" style="display:none">Rematch (swap sides)</button>
+  </div>
+</section>
+
 <noscript><p style="padding:20px">These games need JavaScript switched on.</p></noscript>
 
 <script>
@@ -344,7 +396,7 @@ const PEERJS_URL  = window.__GB_PEERJS_URL || 'https://unpkg.com/peerjs@1.5.5/di
 // Free Cloudflare game-room server (see server/). Lets phones play over mobile data.
 // Leave empty to play direct only (all phones on the same Wi-Fi).
 const ROOMS_URL   = window.__GB_ROOMS_URL ?? 'wss://greenblock-rooms.ric-green.workers.dev';
-const PROTO       = 5;
+const PROTO       = 6;
 const ID_PREFIX   = 'greenblock-v2-';
 const LOCAL       = new URLSearchParams(location.search).has('local');
 const COLS = 10, ROWS = 22, HIDDEN = 2, VIS = ROWS - HIDDEN;
@@ -749,14 +801,17 @@ function later(fn,ms){ const id=setTimeout(fn,ms); S.timers.push(id); return id;
 function clearTimers(){ S.timers.forEach(clearTimeout); S.timers=[]; }
 const onGameScreen = () => $('#game').classList.contains('active');
 const onBoatsScreen = () => $('#boats').classList.contains('active');
-const inPlay = () => onGameScreen() || onBoatsScreen();
-const gameName = () => S.game==='boats' ? 'FightyBoats' : 'GreenBlock';
+const onChessScreen = () => $('#chess').classList.contains('active');
+const inPlay = () => onGameScreen() || onBoatsScreen() || onChessScreen();
+const gameName = () => S.game==='boats' ? 'FightyBoats' : S.game==='chess' ? 'ScrappyChess' : 'GreenBlock';
+const maxPlayers = () => S.game==='chess' ? 2 : MAX_PLAYERS;
 
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id));
-  document.documentElement.classList.toggle('ingame', id==='game' || id==='boats');
+  document.documentElement.classList.toggle('ingame', id==='game' || id==='boats' || id==='chess');
   if (id==='game') requestAnimationFrame(layout);
   if (id==='boats') requestAnimationFrame(()=>fbLayout());
+  if (id==='chess') requestAnimationFrame(()=>chLayout());
   checkZoom();
 }
 function ovShow(html){ const o=$('#overlay'); o.innerHTML=html; o.classList.add('show'); }
@@ -799,8 +854,8 @@ function hostLobby(){
   if (S.role!=='host' || S.inMatch || S.lost) return;
   const n=S.players.length;
   lobby(`<div class="lab">${gameName()} · your game code</div><div class="bigcode">${esc(S.code)}</div>
-    <div class="small">On the other phones, type this code and tap <b>Join</b>. Up to ${MAX_PLAYERS} players.</div>
-    <div class="plist">${playerRows()}${n<MAX_PLAYERS?'<div class="empty">Waiting for players…</div>':''}</div>
+    <div class="small">On the other phones, type this code and tap <b>Join</b>. ${S.game==='chess'?'A game for two players.':`Up to ${MAX_PLAYERS} players.`}</div>
+    <div class="plist">${playerRows()}${n<maxPlayers()?`<div class="empty">Waiting for ${S.game==='chess'?'the other player':'players'}…</div>`:''}</div>
     ${modeLine()}
     <button class="btn primary" data-act="start"${n<2?' disabled':''}>${n<2?'Start match':`Start match · ${n} players`}</button>
     <button class="btn" data-act="cancel">Cancel</button>`);
@@ -821,7 +876,7 @@ function lobbyError(msg){
 $('#lobbyBody').addEventListener('click',e=>{
   const a=e.target.closest('[data-act]'); if (!a || a.disabled) return;
   if (a.dataset.act==='cancel') leave();
-  if (a.dataset.act==='start' && S.role==='host' && S.players.length>=2){ if (S.game==='boats') fbStartMatch(); else startMatch(); }
+  if (a.dataset.act==='start' && S.role==='host' && S.players.length>=2){ if (S.game==='boats') fbStartMatch(); else if (S.game==='chess') chStartMatch(); else startMatch(); }
 });
 
 /* ---------------- networking ---------------- */
@@ -984,10 +1039,10 @@ function onHostMsg(link, m){
   link.lastHeard=performance.now();
   if (link.id==null){
     if (m.t!=='hello') return;
-    const reject=t=>{ link.send({t}); S.pending.delete(link); setTimeout(()=>link.close(),400); };
+    const reject=t=>{ link.send({t, max:maxPlayers()}); S.pending.delete(link); setTimeout(()=>link.close(),400); };
     if ((m.v|0)!==PROTO) return reject('old');
     if (S.inMatch) return reject('busy');
-    if (S.players.length>=MAX_PLAYERS) return reject('full');
+    if (S.players.length>=maxPlayers()) return reject('full');
     let id=1; while (S.players.some(p=>p.id===id)) id++;
     const base=cleanName(m.name); let name=base, k=2;
     while (S.players.some(p=>p.name.toLowerCase()===name.toLowerCase())) name=base.slice(0,10)+' '+(k++);
@@ -1001,6 +1056,7 @@ function onHostMsg(link, m){
   const id=link.id;
   if (S.links.get(id)!==link) return;
   if (typeof m.t==='string' && m.t.startsWith('fb-')){ fbHostMsg(id, m); return; }
+  if (typeof m.t==='string' && m.t.startsWith('ch-')){ chHostMsg(id, m); return; }
   switch (m.t){
     case 'b':
       if (m.r!==S.round) return;
@@ -1081,6 +1137,7 @@ function aloneEnd(text){
   S.lost=true; S.playing=false; clearTimers(); updatePowerUI();
   if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">No rivals left</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
   else if (onBoatsScreen()) fbOverlay(`<div class="ov-big lose mid-size">No rivals left</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-fbov="menu">Back to menu</button>`);
+  else if (onChessScreen()) chOverlay(`<div class="ov-big lose mid-size">Game ended</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-chov="menu">Back to menu</button>`);
   else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
   teardown();
 }
@@ -1126,24 +1183,25 @@ function onGuestMsg(m){
   if (!m || typeof m!=='object' || S.role!=='guest' || S.lost) return;
   S.lastHeard=performance.now();
   if (typeof m.t==='string' && m.t.startsWith('fb-')){ fbGuestMsg(m); return; }
+  if (typeof m.t==='string' && m.t.startsWith('ch-')){ chGuestMsg(m); return; }
   switch (m.t){
     case 'welcome':
       S.myId=m.you|0; S.connected=true; clearTimeout(S.joinTimer);
-      S.game = m.game==='boats' ? 'boats' : 'block';
+      S.game = m.game==='boats' ? 'boats' : m.game==='chess' ? 'chess' : 'block';
       break;
     case 'roster': {
       const before=S.players;
       S.players=normPlayers(m.players);
       const ids=new Set(S.players.map(p=>p.id));
       before.forEach(p=>{ if (!ids.has(p.id)){ S.alive.delete(p.id); delete S.opp[p.id]; delete S.wins[p.id]; } });
-      if (onGameScreen()){ buildRivals(); updateHud(); } else if (onBoatsScreen()) fbRoster(); else guestLobby();
+      if (onGameScreen()){ buildRivals(); updateHud(); } else if (onBoatsScreen()) fbRoster(); else if (onChessScreen()) chUpdate(); else guestLobby();
       break; }
     case 'left':
       if (onGameScreen() && (m.id|0)!==S.myId) showToast(`${esc(cleanName(m.name))} left the game`, true);
       else if (onBoatsScreen() && (m.id|0)!==S.myId) fbToast(`${esc(cleanName(m.name))} left the game`, true);
       break;
     case 'old':  lobbyError('This phone has a different version of GreenBlock from the host. Refresh the page on every phone and try again.'); break;
-    case 'full': lobbyError('That game already has three players.'); break;
+    case 'full': lobbyError(m.max===2 ? 'That game already has two players.' : 'That game already has three players.'); break;
     case 'busy': lobbyError('That game has already started. Ask the host to start a new one.'); break;
     case 'start':
       S.players=normPlayers(m.players); S.wins=normWins(m.wins);
@@ -1176,6 +1234,7 @@ function connectionLost(msg){
   const text = msg || `Lost the connection to ${hostName()}.`;
   if (onGameScreen()) ovShow(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-ov="menu">Back to menu</button>`);
   else if (onBoatsScreen()) fbOverlay(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-fbov="menu">Back to menu</button>`);
+  else if (onChessScreen()) chOverlay(`<div class="ov-big lose mid-size">Disconnected</div><div class="ov-sub">${esc(text)}</div><button class="btn primary" data-chov="menu">Back to menu</button>`);
   else lobby(`<div class="err">${esc(text)}</div><button class="btn" data-act="cancel">Back</button>`);
   teardown();
 }
@@ -1211,7 +1270,7 @@ function leave(){
   sayBye();
   clearTimers(); teardown();
   S.playing=false; S.role=null; S.mode=null; S.lost=false; S.connected=false; S.inMatch=false;
-  game=null; ovHide(); hideToast(); releaseWake(); fbReset();
+  game=null; ovHide(); hideToast(); releaseWake(); fbReset(); chReset();
   showScreen('menu');
 }
 window.addEventListener('pagehide', sayBye);
@@ -1364,7 +1423,7 @@ function sendBoard(force){
 let wake=null;
 async function requestWake(){ try{ if ('wakeLock' in navigator && !wake){ wake=await navigator.wakeLock.request('screen'); wake.addEventListener('release',()=>{ wake=null; }); } }catch(_){ wake=null; } }
 function releaseWake(){ try{ if (wake) wake.release(); }catch(_){}; wake=null; }
-document.addEventListener('visibilitychange',()=>{ if (document.visibilityState==='visible' && ((game && onGameScreen()) || onBoatsScreen())) requestWake(); });
+document.addEventListener('visibilitychange',()=>{ if (document.visibilityState==='visible' && ((game && onGameScreen()) || onBoatsScreen() || onChessScreen())) requestWake(); });
 
 /* ---------------- touch controls ---------------- */
 let G=null;
@@ -1476,6 +1535,7 @@ function readName(){ const n=cleanName($('#nameIn').value); S.myName=n; saveName
 $('#hostBtn').addEventListener('click',()=>{ $('#menuErr').textContent=''; readName(); S.game='block'; hostGame(); });
 $('#fbHostBtn').addEventListener('click',()=>{ $('#menuErr').textContent=''; readName(); S.game='boats'; hostGame(); });
 $('#fbSoloBtn').addEventListener('click',()=>{ readName(); fbStartSolo(); });
+$('#chHostBtn').addEventListener('click',()=>{ $('#menuErr').textContent=''; readName(); S.game='chess'; hostGame(); });
 $('#joinBtn').addEventListener('click',()=>{
   const code=$('#codeIn').value.trim().toUpperCase().replace(/[^A-Z]/g,'');
   if (code.length!==4){ $('#menuErr').textContent='Enter the 4-letter code from the host’s screen.'; return; }
@@ -1488,7 +1548,7 @@ $('#quitBtn').addEventListener('click',()=>{
   if (S.mode==='versus' && !S.lost && !confirm('Leave the match?')) return;
   leave();
 });
-window.addEventListener('resize',()=>{ if (onGameScreen()) layout(); if (onBoatsScreen()) fbLayout(); });
+window.addEventListener('resize',()=>{ if (onGameScreen()) layout(); if (onBoatsScreen()) fbLayout(); if (onChessScreen()) chLayout(); });
 
 /* ---------------- main loop ---------------- */
 let last=performance.now();
@@ -1498,6 +1558,7 @@ function frame(t){
   if (S.mode==='versus' && S.playing) sendBoard(false);
   render();
   if (onBoatsScreen() && typeof fbFrame==='function') fbFrame(t);
+  if (onChessScreen() && typeof chFrame==='function') chFrame(t);
   requestAnimationFrame(frame);
 }
 drawLogo();
@@ -1508,6 +1569,7 @@ requestAnimationFrame(frame);
 // test hook (harmless in normal play)
 window.__bd = {S, get game(){ return game; }, checkZoom, usePower};
 </script>
-<script src="fightyboats.js?v=4.1"></script>
+<script src="fightyboats.js?v=5"></script>
+<script src="chess.js?v=5"></script>
 </body>
 </html>

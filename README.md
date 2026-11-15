@@ -1,6 +1,6 @@
 # Green Games
 
-Two family games for phones, hosted on GitHub Pages: **GreenBlock** (a falling-block battle) and **FightyBoats** (canal-boat battleships). Two or three players, on Wi-Fi or mobile data; each game also has a solo mode.
+Three family games for phones, hosted on GitHub Pages: **GreenBlock** (a falling-block battle), **FightyBoats** (canal-boat battleships) and **ScrappyChess** (chess with battling cartoon castle folk). GreenBlock and FightyBoats take two or three players and have a solo mode; ScrappyChess is for two. All work on Wi-Fi or mobile data.
 
 ## Playing
 
@@ -34,9 +34,19 @@ The computer uses both: it bombs to follow up a line of hits (or late in a long 
 
 Each phone keeps its own fleet secret and answers the shots fired at it; the host's phone keeps track of turns, who is out and who has won. The code is in `fightyboats.js`.
 
+## ScrappyChess
+
+Chess for two with the full rules (castling, en passant, promotion with a choice of piece, check, checkmate, stalemate, and draws by repetition, the 50-move rule or too few pieces). The pieces are original cartoon characters: King, Queen, Tower (rook), Wizard (bishop), Knight (a hobby horse) and Squire (pawn), in a cream team and a purple team. Each player sees their own side at the bottom. Tap a piece, then tap a dot to move; a red ring marks a piece you can take. Taking a piece plays a short battle scene (tap to skip). Sides swap on each rematch and a running score is kept.
+
+**Power-ups** (each once per game):
+- **Undo** — takes back your last move; if your rival has already replied, their reply is taken back too. Your rival is told.
+- **Hint** — a small chess computer built into the page looks a few moves ahead and shows a suggested move.
+
+The host's phone puts the moves in order: the other phone asks to move, the host checks the move is legal and tells both phones. If a phone ever falls out of step it asks the host for the full list of moves. The code is in `chess.js`; the rules are checked against published move counts ("perft") for six test positions.
+
 ## How it works
 
-Everything the phones run is in `index.html` (home screen, lobby, connections and GreenBlock) and `fightyboats.js` — no build step. The host's phone is the hub: it decides who is out and who wins each round, and passes boards and attacks between the other phones. Everyone gets the same piece sequence each round from a shared random seed.
+Everything the phones run is in `index.html` (home screen, lobby, connections and GreenBlock), `fightyboats.js` and `chess.js` — no build step. The host's phone is the hub: it decides who is out and who wins each round, and passes boards and attacks between the other phones. Everyone gets the same piece sequence each round from a shared random seed.
 
 The phones can be linked two ways:
 
